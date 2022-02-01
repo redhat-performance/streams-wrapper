@@ -1,0 +1,454 @@
+#!/bin/bash
+
+arguments="$@"
+chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
+run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+test_name="streams"
+#
+# streams arguments
+#
+opt_three=1
+opt_two=1
+cache_multiply=2
+nsizes=4
+cache_start_factor=1
+threads_multiple=2
+results_dir=""
+cache_cap_size=0
+test_name="streams"
+
+#
+# Report results
+#
+
+process_list()
+{
+	echo $number_sockets Socket >> ../results_${test_name}.csv
+	echo Copy:$copy >> ../results_${test_name}.csv
+	echo Scale:$scale >> ../results_${test_name}.csv
+	echo Add:$add >> ../results_${test_name}.csv
+	echo Triad:$triad >> ../results_${test_name}.csv
+	echo "" >> ../results_${test_name}.csv
+}
+
+process_results()
+{
+	declare -a data
+	data_index=0
+	header=""
+	system_name=""
+
+	real_data=0
+	while IFS= read -r line
+	do
+		if [ $real_data -eq 0 ]; then
+			if [[ $line == "buffer_size"* ]]; then
+				header=${line}
+				real_data=1
+			fi
+		else
+			data[$data_index]=$line
+			let "data_index=${data_index}+1"
+		fi
+	done < "$1"
+	item_count=0
+	#
+	# Sort the data based on # sockets.  To do this, dump the data to a temp
+	# file and sort it. We expect the results file to  already be sorted based on size.
+	#
+	data_file=$(mktemp /tmp/streams_reduce_.XXXXXX)
+	for item in ${data[*]}; do
+		if [ $item_count -eq $data_index ]; then
+			break;
+		fi
+		let "item_count=${item_count}+1"
+		echo "$item" >> $data_file
+	done
+	sort -u -t : -k 3  $data_file| grep -v ^buffer > ${data_file}.sorted
+
+	#
+	# We have the data sorted, now go through things.  Each jump in number of sockets
+	#
+	number_sockets=0
+
+	#
+	# Now build the csv file
+	#
+	field_index=1
+	while IFS= read -r line
+	do
+		current_socket=`echo $line | cut -d':' -f3`
+		if [ $number_sockets -eq 0 ]; then
+			number_sockets=$current_socket
+		else
+			if [ $current_socket -ne $number_sockets ]; then
+				process_list
+				field_index=1
+			fi
+			number_sockets=$current_socket
+		fi
+		#
+		# Building the header list
+		#
+		if [[ $field_index -eq 1 ]]; then
+			header=$system_name
+			copy=""
+			scale=""
+			add=""
+			triad=""
+			separ=""
+		fi
+		field_index=2
+		value=`echo $line | cut -d: -f 1`
+		header=${header}":"${value}
+		#
+		# Easiest way is to put each item into their own file.
+		# When the sockets chance we will then join the files
+		# into one.
+		#
+		val=`echo $line | cut -d: -f 4`
+		copy=${copy}${separ}$val
+		val=`echo $line | cut -d: -f 5`
+		scale=${scale}${separ}$val
+		val=`echo $line | cut -d: -f 6`
+		add=${add}${separ}$val
+		val=`echo $line | cut -d: -f 7`
+		triad=${triad}${separ}$val
+		separ=":"
+	done < ${data_file}.sorted
+	rm ${data_file}.sorted
+	process_list
+}
+
+#
+# Create the summary csv file.
+#
+
+out_line=""
+
+#
+# Retrieve the relevent lines from the file.
+# We return the average of all the lines.
+#
+retrieve_line()
+{
+	search_for=$1
+	file=$2
+	items=0
+	calc_line=""
+
+	info=`grep "${search_for}" ${file}* | tr -s " " | sed "s/ /:/g" | cut -d: -f  4`
+
+	for i in $info; do
+		if [ $items -eq 0 ]; then
+			calc_line="("${calc_line}${i}
+		else
+			calc_line=${calc_line}"+"${i}
+		fi
+			let items="${items}+1"
+	done
+	calc_line=$calc_line")/"$items
+	out_line=$out_line":"`echo $calc_line | bc`
+}
+
+#
+# First get the data
+#
+#
+# line format
+# buffer_size:#threads:#sockets:Copy rate:Scale rate:Add rate:Triad rate
+#
+retrieve_results()
+{
+	last_file=""
+	#
+	# Get all the files to work on.
+	#
+	ls stream* | sort > files
+	for i in `cat files`; do
+		file=`echo $i | cut -d'_'  -f 1-5`
+		if [[ $file == $last_file ]]; then
+			continue
+		fi
+		last_file=$file
+		out_line=`echo $i | cut -d'.' -f 2`
+		out_line=$out_line":"`echo $i | cut -d'_' -f 2 | cut -d'.' -f1`
+		out_line=$out_line":"`echo $i | cut -d'_' -f 4 | cut -d'.' -f1`
+		retrieve_line "^Copy" $file
+		retrieve_line "^Scale" $file
+		retrieve_line "^Add" $file
+		retrieve_line "^Triad" $file
+		echo $out_line >> temp_file
+	done
+	#
+	# Header
+	#
+	echo buffer_size:#threads:#sockets:Copy:Scale:Add:Triad >> results_${test_name}.wrkr
+	#
+	# Now the actual results
+	#
+	sort -n temp_file >> results_${test_name}.wrkr
+}
+
+#
+# Retrieve the system configuration information
+#
+retrieve_sys_config()
+{
+	echo "% Optimization level: ${1}" >> ../results_${test_name}.csv
+	echo "% kernel_rev "`grep "^kernel:" stream* | cut -d: -f 3 | sort -u` >> ../results_${test_name}.csv
+	echo "% numa_nodes "`grep "^NUMA node(s):" stream* | cut -d: -f 3 | sort -u` >> ../results_${test_name}.csv
+	echo "% number_cpus "`grep "^CPU(s):" stream* | cut -d: -f 3 | sort -u`  >> ../results_${test_name}.csv
+	echo "% Thread(s)_per_core "`grep "Thread(s) per core:" stream* | cut -d: -f 3 | sort -u`  >> ../results_${test_name}.csv
+	echo "% Core(s)_per_socket "`grep "Core(s) per socket:" stream* | cut -d: -f 3 | sort -u`  >> ../results_${test_name}.csv
+	echo "% Socket(s) "`grep "Socket(s):" stream* | cut -d: -f 3 | sort -u`  >> ../results_${test_name}.csv
+	echo "% Model_name "`grep "^Model name" stream* | cut -d: -f 3 | sort -u` >> ../results_${test_name}.csv
+	echo "% total_memory "`grep "MemTotal:" /proc/meminfo | cut -d':' -f 2 | sed "s/ //g"` >> ../results_${test_name}.csv
+	echo "% streams_version_# "`grep "^STREAM version" stream* | cut -d':' -f 3 | cut -d' ' -f2 | sort -u` >> ../results_${test_name}.csv
+}
+
+#
+# General setup
+#
+set_up_test()
+{
+	#
+	# Set the results dir name, and create it.
+	#
+	if [[ $results_dir == "" ]]; then
+		results_dir=results_${test_name}_${to_tuned_setting}_`date +"%Y%m%d%H%M%S"`
+	fi
+	if [ -d /$run_dir/run_stream ]; then
+		rm -rf /$run_dir/run_stream 2> /dev/null
+	fi
+	if [ -d /tmp/streams_results ]; then
+		rm -rf /tmp/streams_results
+	fi
+	mkdir /tmp/streams_results
+
+	#
+	# Setup the run script
+	#
+	cp $run_dir/streams_extra/run_stream $run_dir
+	chmod 755 $run_dir/run_stream
+}
+
+#
+# Run the test.
+#
+run_stream()
+{
+	cd $run_dir
+	echo `pwd`/run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration}
+	./run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration} > /tmp/streams_results/${2}_opt_${1}
+	mv ${results_dir}_* /tmp/streams_results
+	cd ..
+}
+
+streams_run()
+{
+	if [[ $opt_three -ne 0 ]]; then
+		run_stream 3  "streams_O3_${to_tuned_setting}.out"
+	fi
+	if [[ $opt_two -ne 0 ]]; then
+		run_stream 2  "streams_O2_${to_tuned_setting}.out"
+	fi
+}
+
+usage()
+{
+	echo Usage ${1}:
+	echo "--cache_multiply <value>: Multiply cache sizes by <value>. Default is 2"
+	echo "--cache_start_factor <value>: Start the cache size at base cache * <value>"
+	echo "    Default is 1"
+	echo "--cache_cap_size <value>: Caps the size of cache to this value.  Default is no cap."
+	echo "--nsizes <value>:  Maximum number of cache sizes to do. Default is 4"
+	echo "--opt2 <value>:  If value is not 0, then we will run with optimization level"
+	echo "    2.  Default value is 1"
+	echo "--opt3 <value>:  If value is not 0, then we will run with optimization level"
+	echo "    3.  Default value is 1"
+	echo "--result_dir <string>:  Directory to place results into.  Default is"
+	echo "    results_streams_tuned_<tuned using>_<date>"
+	echo "--threads_multiple <value>: Multiply number threads by <value>. Default is 2"
+	source test_tools/general_setup --usage
+}
+
+tools_git=https://github.com/dvalinrh/test_tools
+
+#
+# Clone the repo that contains the common code and tools
+#
+found=0
+for arg in "$@"; do
+	if [ $found -eq 1 ]; then
+		tools_git=$arg
+		break;
+	fi
+	if [[ $arg == "--tools_git" ]]; then
+		found=1
+	fi
+
+	#
+	# Check to see if usage is requested, if so call usage.
+	# We do this so we do not pull in the common git.
+	#
+	if [[ $arg == "--usage" ]]; then
+		usage $0
+	fi
+done
+
+if [ ! -d "test_tools" ]; then
+        git clone $tools_git
+        if [ $? -ne 0 ]; then
+                echo pulling git $tools_git failed.
+                exit
+        fi
+fi
+
+#
+# Variables set
+#
+# TOOLS_BIN: points to the tool directory
+# to_home_root: home directory
+# to_configuration: configuration information
+# to_times_to_run: number of times to run the test
+# to_pbench: Run the test via pbench
+# to_puser: User running pbench
+# to_run_label: Label for the run
+# to_user: User on the test system running the test
+# to_sys_type: for results info, basically aws, azure or local
+# to_sysname: name of the system
+# to_tuned_setting: tuned setting
+#
+
+source test_tools/general_setup "$@"
+
+#
+# Define user options
+#
+ARGUMENT_LIST=(
+	"cache_cap_size"
+	"cache_multiply"
+	"cache_start_factor"
+	"nsizes"
+	"opt2"
+	"opt3"
+	"results_dir"
+	"threads_multiple"
+)
+
+# read arguments
+opts=$(getopt \
+    --longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
+    --name "$(basename "$0")" \
+    --options "h" \
+    -- "$@"
+)
+
+#
+# If there is an error, bail out.
+#
+if [ $? -ne 0 ]; then
+        usage $0
+fi
+
+eval set --$opts
+
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+		--cache_cap_size)
+			cache_cap_size=$2
+			shift 2
+		;;
+		--cache_multiply)
+			cache_multiply=$2		
+			if [ $cache_multiply -lt 2 ]; then
+				echo Error: cache multiply by must be greater then 1.
+				exit 1
+			fi
+			shift 2
+		;;
+		--cache_start_factor)
+			cache_start_factor=$2		
+			if [ $cache_start_factor -lt 1 ]; then
+				echo Error: cache start factor must be greater then 0.
+				exit 1
+			fi
+			shift 2
+		;;
+		--nsizes)
+			nsizes=${2}
+			shift 2
+		;;
+		--opt2)
+			opt_two=${2}
+			shift 2
+		;;
+		--opt3)
+			opt_three=${2}
+			shift 2
+		;;
+		--results_dir)
+			results_dir=${2}
+			shift 2
+		;;
+		--threads_multiple)
+			threads_multiple=${2}
+			if [ $threads_multiple -lt 2 ]; then
+				echo Error: threads_multiple must be greater then 1.
+				exit 1
+			fi
+			shift 2
+		;;
+ 		-h)
+			usage "0"
+			shift 1
+		;;
+		--)
+			break
+		;;
+		*)
+			echo "not found $1"
+			usage "0"
+		;;
+	esac
+done
+
+if [ $to_pbench -eq 1 ]; then
+	$TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11
+else 
+	set_up_test
+	streams_run
+	cd /tmp
+	if [[ $results_dir == "" ]]; then
+		results_dir=results_streams_${tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
+		rm results_${test_name}_${tuned_setting}
+		mkdir ${results_dir}
+		ln -s ${results_dir} results_${test_name}_${tuned_setting}
+		mv streams_results $results_dir
+	else
+		mkdir ${results_dir}
+		mv streams_results $results_dir
+	fi
+	#
+	# report the results
+	#
+	pushd $results_dir/streams_results
+	rm results_${test_name}.csv > /dev/null
+	for rdir in `ls -d results_streams*`; do
+		if [ -d $rdir ]; then
+			pushd $rdir > /dev/null
+			retrieve_results
+			echo $rdir >> /tmp/sdebug
+			uchars=`echo $rdir | awk -v RS='_' 'END{print NR}'`
+			echo "echo $rdir | awk -v RS='_' 'END{print NR}'" >> /tmp/sdebug
+			opt_level=`echo $rdir | cut -d'_' -f ${uchars} | cut -d'-' -f2`
+			echo "echo $rdir | cut -d'_' -f ${uchars} | cut -d'-' -f2" >> /tmp/sdebug
+			retrieve_sys_config $opt_level
+			process_results results_${test_name}.wrkr
+			popd > /dev/null
+		fi
+	done
+	popd > /dev/null
+	tar hcf results_${test_name}_${to_tuned_setting}.tar $results_dir
+fi

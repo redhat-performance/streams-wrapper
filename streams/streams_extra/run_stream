@@ -1,0 +1,234 @@
+#!/bin/bash
+
+iterations=10
+tuned_config="None"
+optim=3
+optim_opt=""
+cache_multiply=2
+numb_sizes=4
+streams_exec=""
+start_at=1
+thread_multiply=2
+use_cache=""
+base_cache_size=""
+resultdir=""
+cpus_per_node=""
+cache_cap_size=0
+host=`hostname`
+
+#
+# Define options
+#
+ARGUMENT_LIST=(
+	"cache_cap_size"
+	"cache_multiply"
+	"cache_start_size"
+	"host"
+	"iterations"
+	"numb_sizes"
+	"optimize_lvl"
+	"results_dir"
+	"thread_multiply"
+)
+
+NO_ARGUMENTS=(
+        "usage"
+)
+
+
+# read arguments
+opts=$(getopt \
+    --longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
+    --longoptions "$(printf "%s," "${NO_ARGUMENTS[@]}")" \
+    --name "$(basename "$0")" \
+    --options "h" \
+    -- "$@"
+)
+
+eval set --$opts
+
+while [[ $# -gt 0 ]]; do
+	echo $1 >> /tmp/junk
+	case "$1" in
+		--cache_cap_size)
+			cache_cap_size=${2}
+			shift 2
+		;;
+		--cache_multiply)
+			cache_multiply=${2}
+			shift 2
+		;;
+		--cache_start_size)
+			ache_start_size=${2}
+			shift 2
+		;;
+		--host)
+			host=${2}
+			shift 2
+		;;
+		--iterations)
+			iterations=${2}
+			shift 2
+		;;
+		--numb_sizes)
+			numb_sizes=${2}
+			shift 2
+		;;
+		--optimize_lvl)
+			optim=${2}
+			shift 2
+		;;
+			
+		--results_dir)
+			echo setting result dir
+			resultdir=${2}
+			shift 2
+		;;
+		--thread_multiply)
+			thread_multiply=${2}
+			if [[ $thread_multiply == "1" ]]; then
+				echo Thread multiple can not be 1, defaulting to 2
+				thread_multiply=2
+			fi
+			shift 2
+		;;
+		--usage)
+			echo usage to come
+			exit
+		;;
+		--)
+			break;
+		;;
+	esac
+done
+
+build_images()
+{
+	multiple_size=$cache_multiply
+	# AARCH64 doesn't support -m64, so only use that for x86_64.
+	# If another arch needs it we can tweak this easily enough.
+	#
+	# We build the streams, 4 sizes, starting at cache size and then going up by multiples $cache_multiply
+	#
+	dbl_size=`cpp -dD /dev/null | grep __SIZEOF_DOUBLE__ | cut -d' ' -f 3`
+	use_cache=`echo ${base_cache_size}*1024 | bc`
+	cache_size_kb=`echo ${use_cache}/1024 | bc`
+	arch=$(uname -m)
+	if [[ "${arch}" == "x86_64" ]]; then
+		MOPT="-m64"
+	else
+		MOPT=""
+	fi
+
+        arch=`uname -m`	
+	for test_size  in 1 `seq 2 1 $numb_sizes`;
+	do
+		stream=stream.${cache_size_kb}k
+	
+ 		if [[ ${cache_cap_size} != 0 ]]; then
+ 			if [ ${cache_size_kb} -gt ${cache_cap_size} ]; then
+ 				continue
+			fi
+ 		fi
+
+		if [[ $streams_exec == "" ]]; then
+			streams_exec=$stream
+		else
+			streams_exec=$streams_exec" "$stream
+		fi
+		echo $cache_cap_size gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic >> /tmp/dave_debug
+		gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic
+
+		use_cache=`echo ${base_cache_size}*1024*${multiple_size} | bc`
+		cache_size_kb=`echo ${use_cache}/1024 | bc`
+		multiple_size=`echo ${multiple_size}*${cache_multiply} | bc`
+	done
+}
+
+setup_sizing()
+{
+	numa_nodes=`lscpu | grep NUMA | grep CPU | wc -l`
+
+	if [ $optim -eq 3 ]; then
+		echo Optimization=O3
+		optim_opt="-O3"
+	else
+		echo Optimization=02
+		optim_opt="-O2"
+	fi
+	if [[ $resultdir != "" ]]; then
+		resultdir="${resultdir}_${optim_opt}"
+		mkdir $resultdir
+	fi
+	cpus=`lscpu | grep "^CPU(s)" | cut -d: -f 2`
+	echo cpus=${cpus}
+
+	cpus_per_node=`echo ${cpus}/${numa_nodes} | bc`
+
+	#
+	# Sizing from Pete Rival
+	#
+	cpu_list=`cat /proc/cpuinfo | grep "processor"| cut -d: -f 2`
+
+	#
+	# Some systems have a third-level cache that's not an classic L3 cache but rather a System-Level Cache (SLC).
+	# Arm Neoverse-based systems are among these special cases.  At this time that means there's no L3 cache in the
+	# sysfs hierarchy.  Unless and until that changes, special case things with hardcoded numbers because there's
+	# no good way to tell otherwise.  We'll want to revisit this if more systems with different-sized SLCs arrive.
+	#
+
+	if [ -f /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list ]; then
+		top_level_caches=`cat /sys/devices/system/cpu/cpu*/cache/index3/shared_cpu_list |sort | uniq |wc -l`
+		base_cache_size=`cat /sys/devices/system/cpu/cpu0/cache/index*/size | sed -e s/K// -e s/M// | sort -n | tail -1`
+	else
+		#
+		# Neoverse systems have a 32MB SLC that is not exposed properly.  Work around that here.
+		#
+		top_level_caches=$numa_nodes
+		base_cache_size=$(( 32768 * numa_nodes ))
+	fi
+	base_cache_size=`echo "${base_cache_size} * ${start_at}" | bc`
+}
+
+setup_sizing
+build_images
+numb_threads=$cpus_per_node
+#
+# Now socket combinations, we start with socket 0 and 1 and continue from there.
+#
+
+echo Host: $host
+echo Opt_lvl: $optim
+echo numa_nodes $numa_nodes
+for sockets_add in 1 `seq 2 1 ${numa_nodes}`
+do
+	worker=`echo ${numb_threads}*${sockets_add} | bc`
+	export OMP_NUM_THREADS=$worker
+	for iteration in 0 `seq 1 1 ${iterations}`
+	do
+		for stream_size in $streams_exec
+			do
+				cpus=""
+				cpu_numa=`lscpu | grep "NUMA node" | grep CPU | cut -d: -f 2 | sed "s/ //g"`
+				for cpus_add in $cpu_numa; do
+					cpus=${cpus}${cpus_add}
+					echo Running on cpus: $cpus
+					export GOMP_CPU_AFFINITY=$cpus
+					total_sockets=$[$sockets_add]
+					if [[ $resultdir != "" ]]; then
+						echo ok, We are here >> /tmp/dave_debug
+						echo ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration} >> /tmp/dave_debug
+						lscpu >> ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
+						echo GOMP_CPU_AFFINITY: $cpus >> ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
+						./${stream_size} >> ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
+					else
+						lscpu
+						./${stream_size}
+						echo GOMP_CPU_AFFINITY: $cpus
+
+					fi
+					cpus=${cpus}","
+			done
+		done
+	done
+done
