@@ -294,7 +294,7 @@ for arg in "$@"; do
 	# We do this so we do not pull in the common git.
 	#
 	if [[ $arg == "--usage" ]]; then
-		show_usage=0
+		show_usage=1
 	fi
 done
 
@@ -306,7 +306,7 @@ if [ ! -d "test_tools" ]; then
         fi
 fi
 
-if [ $show_usage -eq 0 ]; then
+if [ $show_usage -eq 1 ]; then
 	usage $0
 fi
 
