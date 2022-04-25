@@ -255,6 +255,7 @@ streams_run()
 	fi
 }
 
+tools_git=https://github.com/dvalinrh/test_tools
 usage()
 {
 	echo Usage ${1}:
@@ -270,10 +271,10 @@ usage()
 	echo "--result_dir <string>:  Directory to place results into.  Default is"
 	echo "    results_streams_tuned_<tuned using>_<date>"
 	echo "--threads_multiple <value>: Multiply number threads by <value>. Default is 2"
+	echo "--tools_git <value>: git repo to retrieve the required tools from, default is ${tools_git}"
 	source test_tools/general_setup --usage
 }
 
-tools_git=https://github.com/dvalinrh/test_tools
 
 #
 # Clone the repo that contains the common code and tools
@@ -302,8 +303,10 @@ if [ ! -d "test_tools" ]; then
         git clone $tools_git
         if [ $? -ne 0 ]; then
                 echo pulling git $tools_git failed.
-                exit
+                exit 1
         fi
+else
+	echo Found an existing test_tools directory, using it.
 fi
 
 if [ $show_usage -eq 1 ]; then
@@ -340,6 +343,7 @@ ARGUMENT_LIST=(
 	"opt3"
 	"results_dir"
 	"threads_multiple"
+	"tools_git"
 )
 
 # read arguments
@@ -405,6 +409,12 @@ while [[ $# -gt 0 ]]; do
 			fi
 			shift 2
 		;;
+		--tools_git)
+			#
+			# ignore, already handled.
+			#
+			shift 2
+		;;
  		-h)
 			usage "0"
 			shift 1
@@ -457,3 +467,4 @@ else
 	popd > /dev/null
 	tar hcf results_${test_name}_${to_tuned_setting}.tar $results_dir
 fi
+exit 0
