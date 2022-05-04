@@ -255,7 +255,7 @@ streams_run()
 	fi
 }
 
-tools_git=https://github.com/dvalinrh/test_tools
+tools_git=https://github.com/redhat-performance/test_tools-wrappers
 usage()
 {
 	echo Usage ${1}:
@@ -272,7 +272,7 @@ usage()
 	echo "    results_streams_tuned_<tuned using>_<date>"
 	echo "--threads_multiple <value>: Multiply number threads by <value>. Default is 2"
 	echo "--tools_git <value>: git repo to retrieve the required tools from, default is ${tools_git}"
-	source test_tools/general_setup --usage
+	source test_tools-wrappers/general_setup --usage
 }
 
 
@@ -299,14 +299,14 @@ for arg in "$@"; do
 	fi
 done
 
-if [ ! -d "test_tools" ]; then
+if [ ! -d "test_tools-wrappers" ]; then
         git clone $tools_git
         if [ $? -ne 0 ]; then
                 echo pulling git $tools_git failed.
                 exit 1
         fi
 else
-	echo Found an existing test_tools directory, using it.
+	echo Found an existing test_tools-wrappers directory, using it.
 fi
 
 if [ $show_usage -eq 1 ]; then
@@ -329,7 +329,7 @@ fi
 # to_tuned_setting: tuned setting
 #
 
-source test_tools/general_setup "$@"
+source test_tools-wrappers/general_setup "$@"
 
 #
 # Define user options
