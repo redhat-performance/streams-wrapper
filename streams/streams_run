@@ -443,7 +443,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ $to_pbench -eq 1 ]; then
-	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11 --pbench_tools $to_pstats
+	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11 --pbench_stats $to_pstats
 else 
 	set_up_test
 	streams_run
