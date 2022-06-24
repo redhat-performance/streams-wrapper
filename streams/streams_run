@@ -129,7 +129,7 @@ process_results()
 		triad=${triad}${separ}$val
 		separ=":"
 	done < ${data_file}.sorted
-	rm ${data_file}.sorted
+	rm ${data_file}.sorted 2> /dev/null
 	process_list
 }
 
@@ -201,6 +201,7 @@ retrieve_results()
 	# Now the actual results
 	#
 	sort -n temp_file >> results_${test_name}.wrkr
+	rm temp_file files
 }
 
 #
@@ -235,7 +236,7 @@ set_up_test()
 		rm -rf /$run_dir/run_stream 2> /dev/null
 	fi
 	if [ -d /tmp/streams_results ]; then
-		rm -rf /tmp/streams_results
+		rm -rf /tmp/streams_results 2> /dev/null
 	fi
 	mkdir /tmp/streams_results
 
@@ -450,7 +451,7 @@ else
 	cd /tmp
 	if [[ $results_dir == "" ]]; then
 		results_dir=results_streams_${tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
-		rm results_${test_name}_${tuned_setting}
+		rm results_${test_name}_${tuned_setting} 2> /dev/null
 		mkdir ${results_dir}
 		ln -s ${results_dir} results_${test_name}_${tuned_setting}
 		mv streams_results $results_dir
@@ -458,22 +459,21 @@ else
 		mkdir ${results_dir}
 		mv streams_results $results_dir
 	fi
+	mv ${run_dir}/streams_build_options $results_dir
 	#
 	# report the results
 	#
 	pushd $results_dir/streams_results
-	rm results_${test_name}.csv > /dev/null
+	rm results_${test_name}.csv 2> /dev/null
 	for rdir in `ls -d results_streams*`; do
 		if [ -d $rdir ]; then
 			pushd $rdir > /dev/null
 			retrieve_results
-			echo $rdir >> /tmp/sdebug
 			uchars=`echo $rdir | awk -v RS='_' 'END{print NR}'`
-			echo "echo $rdir | awk -v RS='_' 'END{print NR}'" >> /tmp/sdebug
 			opt_level=`echo $rdir | cut -d'_' -f ${uchars} | cut -d'-' -f2`
-			echo "echo $rdir | cut -d'_' -f ${uchars} | cut -d'-' -f2" >> /tmp/sdebug
 			retrieve_sys_config $opt_level
 			process_results results_${test_name}.wrkr
+			rm results_${test_name}.wrkr 2> /dev/null
 			popd > /dev/null
 		fi
 	done
