@@ -136,7 +136,7 @@ build_images()
 		else
 			streams_exec=$streams_exec" "$stream
 		fi
-		echo $cache_cap_size gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic >> /tmp/dave_debug
+		echo gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic >> streams_build_options
 		gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic
 
 		use_cache=`echo ${base_cache_size}*1024*${multiple_size} | bc`
@@ -216,8 +216,6 @@ do
 					export GOMP_CPU_AFFINITY=$cpus
 					total_sockets=$[$sockets_add]
 					if [[ $resultdir != "" ]]; then
-						echo ok, We are here >> /tmp/dave_debug
-						echo ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration} >> /tmp/dave_debug
 						lscpu >> ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
 						echo GOMP_CPU_AFFINITY: $cpus >> ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
 						./${stream_size} >> ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
