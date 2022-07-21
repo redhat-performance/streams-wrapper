@@ -16,15 +16,6 @@ else
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
 fi
 
-if [ ! -f "/tmp/streams.out" ]; then
-        command="${0} $@"
-        echo $command
-        $command &> /tmp/streams.out
-        cat /tmp/streams.out
-        rm /tmp/streams.out
-        exit
-fi
-
 test_name="streams"
 #
 # streams arguments
@@ -360,6 +351,11 @@ fi
 
 source test_tools/general_setup "$@"
 
+if [ ! -f "/tmp/${test_name}.out" ]; then
+	${TOOLS_BIN}/invoke_test --test_name ${test_name} --command ${0} --options "${arguments}"
+	exit $?
+fi
+
 #
 # Define user options
 #
@@ -490,10 +486,10 @@ else
 			retrieve_sys_config $opt_level
 			process_results results_${test_name}.wrkr
 			rm results_${test_name}.wrkr 2> /dev/null
-			cp /tmp/streams.out .
 			popd > /dev/null
 		fi
 	done
+	mv /tmp/streams.out .
 	mv /tmp/test_results_report .
 	popd > /dev/null
 	tar hcf results_${test_name}_${to_tuned_setting}.tar $results_dir
