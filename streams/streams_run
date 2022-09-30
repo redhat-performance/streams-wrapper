@@ -349,6 +349,7 @@ fi
 # to_tuned_setting: tuned setting
 #
 
+${curdir}/test_tools/gather_data ${curdir}
 source test_tools/general_setup "$@"
 
 if [ ! -f "/tmp/${test_name}.out" ]; then
@@ -471,7 +472,7 @@ else
 		mv streams_results $results_dir
 	fi
 	mv ${run_dir}/streams_build_options $results_dir
-	cp ${curdir}/meta_data.yml $results_dir
+	${curdir}/test_tools/move_data $curdir $results_dir
 	#
 	# report the results
 	#
