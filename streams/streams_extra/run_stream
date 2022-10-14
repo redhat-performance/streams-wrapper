@@ -32,6 +32,7 @@ resultdir=""
 cpus_per_node=""
 cache_cap_size=0
 host=`hostname`
+size_list="0"
 
 #
 # Define options
@@ -45,6 +46,7 @@ ARGUMENT_LIST=(
 	"numb_sizes"
 	"optimize_lvl"
 	"results_dir"
+	"size_list"
 	"thread_multiply"
 )
 
@@ -101,6 +103,10 @@ while [[ $# -gt 0 ]]; do
 			resultdir=${2}
 			shift 2
 		;;
+		--size_list)
+			size_list=${2}
+			shift 2
+		;;
 		--thread_multiply)
 			thread_multiply=${2}
 			if [[ $thread_multiply == "1" ]]; then
@@ -138,28 +144,44 @@ build_images()
 	fi
 
         arch=`uname -m`	
-	for test_size  in 1 `seq 2 1 $numb_sizes`;
-	do
-		stream=stream.${cache_size_kb}k
-	
- 		if [[ ${cache_cap_size} != 0 ]]; then
- 			if [ ${cache_size_kb} -gt ${cache_cap_size} ]; then
- 				continue
+	if [[ $size_list == "0" ]]; then
+		for test_size  in 1 `seq 2 1 $numb_sizes`;
+		do
+			stream=stream.${cache_size_kb}k
+		
+ 			if [[ ${cache_cap_size} != 0 ]]; then
+ 				if [ ${cache_size_kb} -gt ${cache_cap_size} ]; then
+ 					continue
+				fi
+ 			fi
+
+			if [[ $streams_exec == "" ]]; then
+				streams_exec=$stream
+			else
+				streams_exec=$streams_exec" "$stream
 			fi
- 		fi
+			echo gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic >> streams_build_options
+			gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic
 
-		if [[ $streams_exec == "" ]]; then
-			streams_exec=$stream
-		else
-			streams_exec=$streams_exec" "$stream
-		fi
-		echo gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic >> streams_build_options
-		gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic
-
-		use_cache=`echo ${base_cache_size}*1024*${multiple_size} | bc`
-		cache_size_kb=`echo ${use_cache}/1024 | bc`
-		multiple_size=`echo ${multiple_size}*${cache_multiply} | bc`
-	done
+			use_cache=`echo ${base_cache_size}*1024*${multiple_size} | bc`
+			cache_size_kb=`echo ${use_cache}/1024 | bc`
+			multiple_size=`echo ${multiple_size}*${cache_multiply} | bc`
+		done
+	else
+		walk_list=`echo $size_list | sed "s/,/ /g"`
+		for test_size in $walk_list; do
+			cache_size_kb=`echo "$test_size/1024" | bc`
+			stream=stream.${cache_size_kb}k
+			if [[ $streams_exec == "" ]]; then
+				streams_exec=$stream
+			else
+				streams_exec=$streams_exec" "$stream
+			fi
+			echo gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${test_size} stream_omp_5_10.c -o ${stream} -fno-pic >> streams_build_options
+			gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${test_size} stream_omp_5_10.c -o ${stream} -fno-pic
+		done
+	fi
+	echo $streams_exec >> /tmp/dave
 }
 
 setup_sizing()
@@ -225,6 +247,7 @@ do
 	do
 		for stream_size in $streams_exec
 			do
+				echo run $stream_size >> /tmp/dave
 				cpus=""
 				cpu_numa=`lscpu | grep "NUMA node" | grep CPU | cut -d: -f 2 | sed "s/ //g"`
 				for cpus_add in $cpu_numa; do

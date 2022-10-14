@@ -37,6 +37,7 @@ test_name="streams"
 #
 # streams arguments
 #
+size_list="0"
 opt_three=1
 opt_two=1
 cache_multiply=2
@@ -276,8 +277,8 @@ set_up_test()
 run_stream()
 {
 	cd $run_dir
-	echo `pwd`/run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration}
-	./run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration} > /tmp/streams_results/${2}_opt_${1}
+	echo `pwd`/run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration} --size_list ${size_list}
+	./run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration} --size_list ${size_list} > /tmp/streams_results/${2}_opt_${1}
 	mv ${results_dir}_* /tmp/streams_results
 	cd ..
 }
@@ -307,6 +308,7 @@ usage()
 	echo "    3.  Default value is 1"
 	echo "--result_dir <string>:  Directory to place results into.  Default is"
 	echo "    results_streams_tuned_<tuned using>_<date>"
+	echo "--size_list <x,y...>:  List of array sizes in byte"
 	echo "--threads_multiple <value>: Multiply number threads by <value>. Default is 2"
 	echo "--tools_git <value>: git repo to retrieve the required tools from, default is ${tools_git}"
 	source test_tools/general_setup --usage
@@ -385,6 +387,7 @@ ARGUMENT_LIST=(
 	"opt2"
 	"opt3"
 	"results_dir"
+	"size_list"
 	"threads_multiple"
 	"tools_git"
 )
@@ -442,6 +445,10 @@ while [[ $# -gt 0 ]]; do
 		;;
 		--results_dir)
 			results_dir=${2}
+			shift 2
+		;;
+		--size_list)
+			size_list=$2
 			shift 2
 		;;
 		--threads_multiple)
