@@ -20,6 +20,7 @@
 arguments="$@"
 
 curdir=`pwd`
+
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
@@ -45,7 +46,7 @@ test_name="streams"
 #
 size_list="0"
 opt_three=1
-opt_two=1
+opt_two=0
 cache_multiply=2
 nsizes=4
 cache_start_factor=1
@@ -180,14 +181,21 @@ retrieve_line()
 	items=0
 	calc_line=""
 
-	info=`grep "${search_for}" ${file}* | tr -s " " | sed "s/ /:/g" | cut -d: -f  4`
+	numb_files=`ls ${file}* | wc -w`
+	if [ $numb_files -ne 1 ]; then
+		cut_field=4
+	else
+		cut_field=3
+	fi
+	info=`grep "${search_for}" ${file}* | tr -s " " | sed "s/ /:/g" | cut -d: -f  $cut_field`
+
 	for i in $info; do
 		if [ $items -eq 0 ]; then
 			calc_line="("${calc_line}${i}
 		else
 			calc_line=${calc_line}"+"${i}
 		fi
-			let items="${items}+1"
+		let items="${items}+1"
 	done
 	calc_line=$calc_line")/"$items
 	out_line=$out_line":"`echo $calc_line | bc`
@@ -281,7 +289,12 @@ set_up_test()
 #
 run_stream()
 {
+	cd $run_dir
 	echo `pwd`/run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration} --size_list ${size_list}
+	if [ $? -ne 0 ]; then
+		echo "Execution of run stream failed."
+		exit 1
+	fi
 	./run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration} --size_list ${size_list} > /tmp/streams_results/${2}_opt_${1}
 	if [ $? -ne 0 ]; then
 		echo "Execution of run stream failed."
