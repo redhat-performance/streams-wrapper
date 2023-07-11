@@ -20,6 +20,7 @@
 arguments="$@"
 
 curdir=`pwd`
+
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
@@ -28,9 +29,15 @@ if [[ $0 == "./"* ]]; then
 		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
 		run_dir="${curdir}${run_dir}"
 	fi
+elif [[ $0 != "/"* ]]; then
+	dir=`echo $0 | rev | cut -d'/' -f2- | rev`
+	run_dir="${curdir}/${dir}"
 else
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+	if [[ $run_dir != "/"* ]]; then
+		run_dir=${curdir}/${run_dir}
+	fi
 fi
 
 test_name="streams"
@@ -39,7 +46,7 @@ test_name="streams"
 #
 size_list="0"
 opt_three=1
-opt_two=1
+opt_two=0
 cache_multiply=2
 nsizes=4
 cache_start_factor=1
@@ -174,7 +181,13 @@ retrieve_line()
 	items=0
 	calc_line=""
 
-	info=`grep "${search_for}" ${file}* | tr -s " " | sed "s/ /:/g" | cut -d: -f  3`
+	numb_files=`ls ${file}* | wc -w`
+	if [ $numb_files -ne 1 ]; then
+		cut_field=4
+	else
+		cut_field=3
+	fi
+	info=`grep "${search_for}" ${file}* | tr -s " " | sed "s/ /:/g" | cut -d: -f  $cut_field`
 
 	for i in $info; do
 		if [ $items -eq 0 ]; then
@@ -182,7 +195,7 @@ retrieve_line()
 		else
 			calc_line=${calc_line}"+"${i}
 		fi
-			let items="${items}+1"
+		let items="${items}+1"
 	done
 	calc_line=$calc_line")/"$items
 	out_line=$out_line":"`echo $calc_line | bc`
