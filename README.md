@@ -1,12 +1,12 @@
 Automation wrapper for streams
 
 Description:
-           This wrapper runs the streams prorgam written by
+           This wrapper runs the streams program written by
 		John D. McCalpin
 		Joe R. Zagar
-	    The progam being excuted, measures memory transfer
-            rates in MB/s for simple. It is run to provide a rough
-	    idea of memory rates on machine. However is a bit outdated
+	    The program being executed, measures memory transfer
+            rates in MB/s and provides a rough idea of memory rates
+            of the machine. However it is a bit outdated
 	    and does not deal with numa.
   
 Location of underlying workload: part of the github kit
