@@ -19,7 +19,7 @@ To run:
 [root@hawkeye ~]# streams-wrapper/streams/streams_run
 ```
 
-The script will set the sizings based on the hardware it is being run.
+The script will set the buffer sizes based on the hardware it is being executed on.
 
 ```
 Options
@@ -49,7 +49,7 @@ General options
   --run_label: the label to associate with the pbench run. No default setting.
   --run_user: user that is actually running the test on the test system. Defaults to user running wrapper.
   --sys_type: Type of system working with, aws, azure, hostname.  Defaults to hostname.
-  --sysname: name of the system running, used in determing config files.  Defaults to hostname.
+  --sysname: name of the system running, used in determining config files.  Defaults to hostname.
   --tuned_setting: used in naming the tar file, default for RHEL is the current active tuned.  For non
     RHEL systems, default is none.
   --usage: this usage message.
