@@ -196,7 +196,7 @@ setup_sizing()
 {
 	numa_nodes=`lscpu | grep NUMA | grep CPU | wc -l`
 	if [ $numa_nodes -le 0 ];then
-		$numa_nodes=1
+		numa_nodes=1
 	fi
 
 	if [ $optim -eq 3 ]; then
