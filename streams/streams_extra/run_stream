@@ -199,6 +199,10 @@ setup_sizing()
 		numa_nodes=1
 	fi
 
+	if [ -z $numa_nodes ] || [ $numa_nodes -le 0 ]; then
+		numa_nodes=0
+	fi
+
 	if [ $optim -eq 3 ]; then
 		echo Optimization=O3
 		optim_opt="-O3"
@@ -261,6 +265,10 @@ do
 				echo run $stream_size >> /tmp/dave
 				cpus=""
 				cpu_numa=`lscpu | grep "NUMA node" | grep CPU | cut -d: -f 2 | sed "s/ //g"`
+				if [ -z $cpu_numa ] || [ $cpu_numa -le 0]; then
+					cpu_numa=1
+				fi
+
 				for cpus_add in $cpu_numa; do
 					cpus=${cpus}${cpus_add}
 					echo Running on cpus: $cpus
