@@ -155,8 +155,8 @@ build_images()
 				fi
  			fi
 
-			CC_CMD="gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic >> streams_build_options"
-			echo $CC_CMD
+			CC_CMD="gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic"
+			echo $CC_CMD >> streams_build_options
 			$CC_CMD
 			if [ $? -ne 0 ]; then
 				if [ -z $streams_exec ]; then
