@@ -159,11 +159,11 @@ build_images()
 			echo $CC_CMD
 			$CC_CMD
 			if [ $? -ne 0 ]; then
-				if [ $use_cache -eq $base_cache_size ]; then
+				if [ -z $streams_exec ]; then
 					echo Compilation of streams failed.
 					exit 1
 				else
-					echo Could not compile streams with $((use_cache/1024))KB size, skipping
+					echo Could not compile streams with use_cache size, skipping
 				fi
 			else
 				if [[ $streams_exec == "" ]]; then
