@@ -159,7 +159,7 @@ build_images()
 			echo $CC_CMD >> streams_build_options
 			$CC_CMD
 			if [ $? -ne 0 ]; then
-				if [ -z $streams_exec ]; then
+				if [ -z "$streams_exec" ]; then
 					echo Compilation of streams failed.
 					exit 1
 				else
