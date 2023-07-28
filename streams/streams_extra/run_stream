@@ -163,7 +163,7 @@ build_images()
 					echo Compilation of streams failed.
 					exit 1
 				else
-					echo Could not compile streams with use_cache size, skipping
+					echo Could not compile streams with $use_cache size, skipping
 				fi
 			else
 				if [[ $streams_exec == "" ]]; then
