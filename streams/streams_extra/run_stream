@@ -164,14 +164,13 @@ build_images()
 					exit 1
 				else
 					echo Could not compile streams with $((use_cache/1024))KB size, skipping
-					continue
 				fi
-			fi
-
-			if [[ $streams_exec == "" ]]; then
-				streams_exec=$stream
 			else
-				streams_exec=$streams_exec" "$stream
+				if [[ $streams_exec == "" ]]; then
+					streams_exec=$stream
+				else
+					streams_exec=$streams_exec" "$stream
+				fi
 			fi
 
 			use_cache=`echo ${base_cache_size}*1024*${multiple_size} | bc`
