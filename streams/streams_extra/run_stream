@@ -155,16 +155,22 @@ build_images()
 				fi
  			fi
 
-			if [[ $streams_exec == "" ]]; then
-				streams_exec=$stream
-			else
-				streams_exec=$streams_exec" "$stream
-			fi
-			echo gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic >> streams_build_options
-			gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic
+			CC_CMD="gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic"
+			echo $CC_CMD >> streams_build_options
+			$CC_CMD
 			if [ $? -ne 0 ]; then
-				echo Compilation of streams failed.
-				exit 1
+				if [ -z "$streams_exec" ]; then
+					echo Compilation of streams failed.
+					exit 1
+				else
+					echo Could not compile streams with $use_cache size, skipping
+				fi
+			else
+				if [[ $streams_exec == "" ]]; then
+					streams_exec=$stream
+				else
+					streams_exec=$streams_exec" "$stream
+				fi
 			fi
 
 			use_cache=`echo ${base_cache_size}*1024*${multiple_size} | bc`
