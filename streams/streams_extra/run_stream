@@ -265,8 +265,8 @@ do
 				echo run $stream_size >> /tmp/dave
 				cpus=""
 				cpu_numa=`lscpu | grep "NUMA node" | grep CPU | cut -d: -f 2 | sed "s/ //g"`
-				if [ -z $cpu_numa ] || [ $cpu_numa -le 0]; then
-					cpu_numa=1
+				if [ -z $cpu_numa ]; then
+					cpu_numa=`lscpu | grep "On-line CPU(s) list:" | cut -d: -f2 | sed "s/ //g"`
 				fi
 
 				for cpus_add in $cpu_numa; do
