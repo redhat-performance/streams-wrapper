@@ -20,7 +20,6 @@
 arguments="$@"
 
 curdir=`pwd`
-
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
@@ -29,15 +28,9 @@ if [[ $0 == "./"* ]]; then
 		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
 		run_dir="${curdir}${run_dir}"
 	fi
-elif [[ $0 != "/"* ]]; then
-	dir=`echo $0 | rev | cut -d'/' -f2- | rev`
-	run_dir="${curdir}/${dir}"
 else
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
-	if [[ $run_dir != "/"* ]]; then
-		run_dir=${curdir}/${run_dir}
-	fi
 fi
 
 test_name="streams"
@@ -46,7 +39,7 @@ test_name="streams"
 #
 size_list="0"
 opt_three=1
-opt_two=0
+opt_two=1
 cache_multiply=2
 nsizes=4
 cache_start_factor=1
@@ -181,13 +174,7 @@ retrieve_line()
 	items=0
 	calc_line=""
 
-	numb_files=`ls ${file}* | wc -w`
-	if [ $numb_files -ne 1 ]; then
-		cut_field=4
-	else
-		cut_field=3
-	fi
-	info=`grep "${search_for}" ${file}* | tr -s " " | sed "s/ /:/g" | cut -d: -f  $cut_field`
+	info=`grep "${search_for}" ${file}* | tr -s " " | sed "s/ /:/g" | cut -d: -f  3`
 
 	for i in $info; do
 		if [ $items -eq 0 ]; then
@@ -505,16 +492,16 @@ if [ $to_pbench -eq 1 ]; then
 else 
 	set_up_test
 	streams_run
-	cd /tmp
+	cd $curdir
 	if [[ $results_dir == "" ]]; then
 		results_dir=results_streams_${tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
 		rm results_${test_name}_${tuned_setting} 2> /dev/null
 		mkdir ${results_dir}
 		ln -s ${results_dir} results_${test_name}_${tuned_setting}
-		mv streams_results $results_dir
+		mv /tmp/streams_results $results_dir
 	else
 		mkdir ${results_dir}
-		mv streams_results $results_dir
+		mv /tmp/streams_results $results_dir
 	fi
 	mv ${run_dir}/streams_build_options $results_dir
 	${curdir}/test_tools/move_data $curdir $results_dir
@@ -538,9 +525,9 @@ else
 	mv /tmp/streams.out .
 	mv /tmp/test_results_report .
 	popd > /dev/null
-	tar hcf results_${test_name}_${to_tuned_setting}.tar $results_dir
-	rm -rf results_pbench.tar
-	working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
-	find $working_dir  -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
+	tar hcf /tmp/results_${test_name}_${to_tuned_setting}.tar $results_dir
+	rm -rf /tmp/results_pbench.tar
+	working_dir=`ls -rtd ${curdir}/results*${test_name}* | grep -v tar | tail -1`
+	find $working_dir  -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
 fi
 exit 0
