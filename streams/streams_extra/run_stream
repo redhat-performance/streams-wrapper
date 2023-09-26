@@ -257,7 +257,7 @@ for sockets_add in 1 `seq 2 1 ${numa_nodes}`
 do
 	worker=`echo ${numb_threads}*${sockets_add} | bc`
 	export OMP_NUM_THREADS=$worker
-	for iteration in $(seq 1 2 ${iterations})
+	for iteration in $(seq 1 1 ${iterations})
 	do
 		for stream_size in $streams_exec
 			do
