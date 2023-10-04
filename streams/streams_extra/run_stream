@@ -195,7 +195,6 @@ build_images()
 			fi
 		done
 	fi
-	echo $streams_exec >> /tmp/dave
 }
 
 setup_sizing()
@@ -260,27 +259,28 @@ do
 	for iteration in $(seq 1 1 ${iterations})
 	do
 		for stream_size in $streams_exec
-			do
-				echo run $stream_size >> /tmp/dave
-				cpus=""
-				cpu_numa=`lscpu | grep "NUMA node" | grep CPU | cut -d: -f 2 | sed "s/ //g"`
-				for cpus_add in $cpu_numa; do
-					cpus=${cpus}${cpus_add}
-					echo Running on cpus: $cpus
-					export GOMP_CPU_AFFINITY=$cpus
-					total_sockets=$[$sockets_add]
-					if [[ $resultdir != "" ]]; then
-						lscpu >> ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
-						echo GOMP_CPU_AFFINITY: $cpus >> ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
-						./${stream_size} >> ${resultdir}/${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
-					else
-						lscpu
-						./${stream_size}
-						echo GOMP_CPU_AFFINITY: $cpus
-
-					fi
-					cpus=${cpus}","
+		do
+			cpus=""
+			separ=","
+			cpu_numa=`lscpu | grep "NUMA node" | grep CPU | cut -d: -f 2 | sed "s/ //g"`
+			for cpus_add in $cpu_numa; do
+				cpus=${cpus}${separ}
+				cpus=${cpus}${cpus_add}
+				separ=","
 			done
+			echo Running on cpus: $cpus
+			export GOMP_CPU_AFFINITY=$cpus
+			total_sockets=$[$sockets_add]
+			resfile=${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
+			if [[ $resultdir != "" ]]; then
+				lscpu >> ${resultdir}/$resfile
+				echo GOMP_CPU_AFFINITY: $cpus >> ${resultdir}/${resfile}
+				./${stream_size} >> ${resultdir}/${resfile}
+			else
+				lscpu
+				./${stream_size}
+				echo GOMP_CPU_AFFINITY: $cpus
+			fi
 		done
 	done
 done
