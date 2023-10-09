@@ -260,8 +260,8 @@ do
 	do
 		for stream_size in $streams_exec
 		do
+			separ=""
 			cpus=""
-			separ=","
 			cpu_numa=`lscpu | grep "NUMA node" | grep CPU | cut -d: -f 2 | sed "s/ //g"`
 			for cpus_add in $cpu_numa; do
 				cpus=${cpus}${separ}
