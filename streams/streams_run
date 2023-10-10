@@ -18,7 +18,6 @@
 #
 
 arguments="$@"
-
 curdir=`pwd`
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
@@ -377,7 +376,10 @@ fi
 #
 
 ${curdir}/test_tools/gather_data ${curdir}
-source test_tools/general_setup "$@"
+#
+# We want a default of 5 iterations
+#
+source test_tools/general_setup "$@" --iteration_default 5
 
 if [ ! -f "/tmp/${test_name}.out" ]; then
 	${TOOLS_BIN}/invoke_test --test_name ${test_name} --command ${0} --options "${arguments}"
