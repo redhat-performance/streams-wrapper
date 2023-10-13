@@ -140,7 +140,7 @@ build_images()
 	if [[ "${arch}" == "x86_64" ]]; then
 		MOPT="-m64"
 	else
-		MOPT=""
+		MOPT="-mno-outline-atomics"
 	fi
 
         arch=`uname -m`	
