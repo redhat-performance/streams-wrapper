@@ -492,6 +492,8 @@ done
 if [ $to_pbench -eq 1 ]; then
 	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11 --pbench_stats $to_pstats
 else 
+	copy_dirs=""
+	copy_separ=""
 	set_up_test
 	streams_run
 	cd $curdir
@@ -514,6 +516,8 @@ else
 	rm results_${test_name}.csv 2> /dev/null
 	for rdir in `ls -d results_streams*`; do
 		if [ -d $rdir ]; then
+			copy_dirs=${copy_dirs}${copy_separ}$rdir
+			copy_separ=","
 			pushd $rdir > /dev/null
 			retrieve_results
 			uchars=`echo $rdir | awk -v RS='_' 'END{print NR}'`
@@ -524,12 +528,7 @@ else
 			popd > /dev/null
 		fi
 	done
-	mv /tmp/streams.out .
-	mv /tmp/test_results_report .
-	popd > /dev/null
-	tar hcf /tmp/results_${test_name}_${to_tuned_setting}.tar $results_dir
-	rm -rf /tmp/results_pbench.tar
-	working_dir=`ls -rtd ${curdir}/results*${test_name}* | grep -v tar | tail -1`
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results ${curdir}/${results_dir}/streams_results/results_streams.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user  --other_files "/tmp/test_results_report" --copy_dir ${curdir}/${results_dir}/streams_results
 	find $working_dir  -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
 fi
 exit 0
