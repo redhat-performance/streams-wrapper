@@ -33,6 +33,7 @@ cpus_per_node=""
 cache_cap_size=0
 host=`hostname`
 size_list="0"
+top_dir=`pwd`
 
 #
 # Define options
@@ -48,6 +49,7 @@ ARGUMENT_LIST=(
 	"results_dir"
 	"size_list"
 	"thread_multiply"
+	"top_dir"
 )
 
 NO_ARGUMENTS=(
@@ -67,7 +69,6 @@ opts=$(getopt \
 eval set --$opts
 
 while [[ $# -gt 0 ]]; do
-	echo $1 >> /tmp/junk
 	case "$1" in
 		--cache_cap_size)
 			cache_cap_size=${2}
@@ -113,6 +114,10 @@ while [[ $# -gt 0 ]]; do
 				echo Thread multiple can not be 1, defaulting to 2
 				thread_multiply=2
 			fi
+			shift 2
+		;;
+		--top_dir)
+			top_dir=${2}
 			shift 2
 		;;
 		--usage)
@@ -199,7 +204,7 @@ build_images()
 
 setup_sizing()
 {
-	numa_nodes=`lscpu | grep NUMA | grep CPU | wc -l`
+	numa_nodes=`$top_dir/test_tools/detect_numa --node-count`
 
 	if [ $optim -eq 3 ]; then
 		echo Optimization=O3
@@ -212,7 +217,7 @@ setup_sizing()
 		resultdir="${resultdir}_${optim_opt}"
 		mkdir $resultdir
 	fi
-	cpus=`lscpu | grep "^CPU(s)" | cut -d: -f 2`
+	cpus=`getconf _NPROCESSORS_ONLN`
 	echo cpus=${cpus}
 
 	cpus_per_node=`echo ${cpus}/${numa_nodes} | bc`
@@ -252,34 +257,32 @@ numb_threads=$cpus_per_node
 echo Host: $host
 echo Opt_lvl: $optim
 echo numa_nodes $numa_nodes
+cpus_use=""
+separ=""
 for sockets_add in 1 `seq 2 1 ${numa_nodes}`
 do
 	worker=`echo ${numb_threads}*${sockets_add} | bc`
 	export OMP_NUM_THREADS=$worker
+	let "node_index=$sockets_add-1"
+	cpu_numa=`$top_dir/test_tools//detect_numa -n $node_index --cpu-list`
+	cpus_use=${cpus_use}${separ}${cpu_numa}
+	separ=","
+	echo Running on cpus: $cpus_use
+	export GOMP_CPU_AFFINITY=$cpus_use
 	for iteration in $(seq 1 1 ${iterations})
 	do
 		for stream_size in $streams_exec
 		do
-			separ=""
-			cpus=""
-			cpu_numa=`lscpu | grep "NUMA node" | grep CPU | cut -d: -f 2 | sed "s/ //g"`
-			for cpus_add in $cpu_numa; do
-				cpus=${cpus}${separ}
-				cpus=${cpus}${cpus_add}
-				separ=","
-			done
-			echo Running on cpus: $cpus
-			export GOMP_CPU_AFFINITY=$cpus
 			total_sockets=$[$sockets_add]
 			resfile=${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
 			if [[ $resultdir != "" ]]; then
 				lscpu >> ${resultdir}/$resfile
-				echo GOMP_CPU_AFFINITY: $cpus >> ${resultdir}/${resfile}
+				echo GOMP_CPU_AFFINITY: $cpus_use >> ${resultdir}/${resfile}
 				./${stream_size} >> ${resultdir}/${resfile}
 			else
 				lscpu
 				./${stream_size}
-				echo GOMP_CPU_AFFINITY: $cpus
+				echo GOMP_CPU_AFFINITY: $cpus_use
 			fi
 		done
 	done
