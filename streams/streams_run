@@ -276,12 +276,7 @@ set_up_test()
 run_stream()
 {
 	cd $run_dir
-	echo `pwd`/run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration} --size_list ${size_list}
-	if [ $? -ne 0 ]; then
-		echo "Execution of run stream failed."
-		exit 1
-	fi
-	./run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration} --size_list ${size_list} > /tmp/streams_results/${2}_opt_${1}
+	./run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration} --size_list ${size_list} > /tmp/streams_results/${2}_opt_${1} --top_dir $curdir
 	if [ $? -ne 0 ]; then
 		echo "Execution of run stream failed."
 		exit 1
