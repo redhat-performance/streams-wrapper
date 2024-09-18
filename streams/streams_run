@@ -18,6 +18,7 @@
 #
 
 arguments="$@"
+streams_wrapper_version=1.0
 curdir=`pwd`
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
@@ -232,16 +233,19 @@ retrieve_results()
 #
 retrieve_sys_config()
 {
-	echo "% Optimization level: ${1}" >> ../results_${test_name}.csv
-	echo "% kernel_rev "`grep "^kernel:" stream* | cut -d: -f 3 | sort -u` >> ../results_${test_name}.csv
-	echo "% numa_nodes "`grep "^NUMA node(s):" stream* | cut -d: -f 3 | sort -u` >> ../results_${test_name}.csv
-	echo "% number_cpus "`grep "^CPU(s):" stream* | cut -d: -f 3 | sort -u`  >> ../results_${test_name}.csv
-	echo "% Thread(s)_per_core "`grep "Thread(s) per core:" stream* | cut -d: -f 3 | sort -u`  >> ../results_${test_name}.csv
-	echo "% Core(s)_per_socket "`grep "Core(s) per socket:" stream* | cut -d: -f 3 | sort -u`  >> ../results_${test_name}.csv
-	echo "% Socket(s) "`grep "Socket(s):" stream* | cut -d: -f 3 | sort -u`  >> ../results_${test_name}.csv
-	echo "% Model_name "`grep "^Model name" stream* | cut -d: -f 3 | sort -u` >> ../results_${test_name}.csv
-	echo "% total_memory "`grep "MemTotal:" /proc/meminfo | cut -d':' -f 2 | sed "s/ //g"` >> ../results_${test_name}.csv
-	echo "% streams_version_# "`grep "^STREAM version" stream* | cut -d':' -f 3 | cut -d' ' -f2 | sort -u` >> ../results_${test_name}.csv
+	streams_vers=`grep "^STREAM version" stream* | cut -d':' -f 3 | cut -d' ' -f2 | sort -u`
+	$TOOLS_BIN/test_header_info --results_file ../results_${test_name}.csv --host $to_configuration --sys_type $to_sys_type \
+          --tuned $to_tuned_setting --results_version $streams_wrapper_version --test_name $test_name \
+	  --meta_output "Optimization level: ${1}" \
+	  --meta_output "kernel_rev "`grep "^kernel:" stream* | cut -d: -f 3 | sort -u`" \
+	  --meta_output "numa_nodes "`grep "^NUMA node(s):" stream* | cut -d: -f 3 | sort -u`" \
+	  --meta_output "number_cpus "`grep "^CPU(s):" stream* | cut -d: -f 3 | sort -u`"  \
+	  --meta_output "Thread\(s\)_per_core "`grep "Thread(s) per core:" stream* | cut -d: -f 3 | sort -u`"  \
+	  --meta_output "Core\(s\)_per_socket "`grep "Core(s) per socket:" stream* | cut -d: -f 3 | sort -u`"  \
+	  --meta_output "Socket\(s\) "`grep "Socket(s):" stream* | cut -d: -f 3 | sort -u`"  \
+	  --meta_output "Model_name "`grep "^Model name" stream* | cut -d: -f 3 | sort -u`" \
+	  --meta_output "total_memory "`grep "MemTotal:" /proc/meminfo | cut -d':' -f 2 | sed "s/ //g"`" \
+	  --meta_output "streams_version_# $streams_vers"
 }
 
 #
@@ -485,6 +489,7 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
+front_meta_data_recorded=0
 if [ $to_pbench -eq 1 ]; then
 	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11 --pbench_stats $to_pstats
 else 
@@ -518,6 +523,10 @@ else
 			retrieve_results
 			uchars=`echo $rdir | awk -v RS='_' 'END{print NR}'`
 			opt_level=`echo $rdir | cut -d'_' -f ${uchars} | cut -d'-' -f2`
+			if [ $front_meta_data_recorded -eq 0 ]; then
+				$TOOLS_BIN/test_header_info --front_matter --results_file ../results_${test_name}.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $streams_wrapper_version --test_name $test_name
+				front_meta_data_recorded=1
+			fi
 			retrieve_sys_config $opt_level
 			process_results results_${test_name}.wrkr
 			rm results_${test_name}.wrkr 2> /dev/null
