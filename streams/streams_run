@@ -233,6 +233,7 @@ retrieve_results()
 #
 retrieve_sys_config()
 {
+        echo "% Optimization level: ${1}" >> ../results_${test_name}.csv
 	streams_vers=`grep "^STREAM version" stream* | cut -d':' -f 3 | cut -d' ' -f2 | sort -u`
 	$TOOLS_BIN/test_header_info --results_file ../results_${test_name}.csv --host $to_configuration --sys_type $to_sys_type \
           --tuned $to_tuned_setting --results_version $streams_wrapper_version --test_name $test_name \
