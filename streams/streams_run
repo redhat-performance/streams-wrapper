@@ -18,6 +18,7 @@
 #
 
 arguments="$@"
+array_size=""
 streams_wrapper_version=1.0
 curdir=`pwd`
 if [[ $0 == "./"* ]]; then
@@ -55,6 +56,7 @@ test_name="streams"
 process_list()
 {
 	echo $number_sockets Socket >> ../results_${test_name}.csv
+	echo $array_size >> ../results_${test_name}.csv
 	echo Copy:$copy >> ../results_${test_name}.csv
 	echo Scale:$scale >> ../results_${test_name}.csv
 	echo Add:$add >> ../results_${test_name}.csv
@@ -101,7 +103,10 @@ process_results()
 		let "item_count=${item_count}+1"
 		echo "$item" >> $data_file
 	done
-	sort -u -t : -k 3  $data_file| grep -v ^buffer > ${data_file}.sorted
+	sort -n -u -t : -k 3 -k 1  $data_file| grep -v ^buffer > ${data_file}.sorted
+	for asize in `cut -d':' -f 1 ${data_file}.sorted | sort -nu`; do
+		array_size=${array_size}":"${asize}
+	done
 
 	#
 	# We have the data sorted, now go through things.  Each jump in number of sockets
@@ -112,6 +117,8 @@ process_results()
 	# Now build the csv file
 	#
 	field_index=1
+	cut -d':' -f1 ${data_file}.sorted  > /tmp/${data_file}_size
+
 	while IFS= read -r line
 	do
 		current_socket=`echo $line | cut -d':' -f3`
@@ -233,7 +240,6 @@ retrieve_results()
 #
 retrieve_sys_config()
 {
-        echo "% Optimization level: ${1}" >> ../results_${test_name}.csv
 	streams_vers=`grep "^STREAM version" stream* | cut -d':' -f 3 | cut -d' ' -f2 | sort -u`
 	$TOOLS_BIN/test_header_info --results_file ../results_${test_name}.csv --host $to_configuration --sys_type $to_sys_type \
           --tuned $to_tuned_setting --results_version $streams_wrapper_version --test_name $test_name \
