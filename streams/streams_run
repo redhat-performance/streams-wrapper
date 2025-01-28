@@ -56,7 +56,7 @@ test_name="streams"
 process_list()
 {
 	echo $number_sockets Socket >> ../results_${test_name}.csv
-	echo $array_size >> ../results_${test_name}.csv
+	echo Array sizes: $array_size >> ../results_${test_name}.csv
 	echo Copy:$copy >> ../results_${test_name}.csv
 	echo Scale:$scale >> ../results_${test_name}.csv
 	echo Add:$add >> ../results_${test_name}.csv
