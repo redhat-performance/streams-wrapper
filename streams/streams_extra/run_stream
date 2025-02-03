@@ -169,7 +169,7 @@ build_images()
 			# Do not build if the free_mem is less then the amount of memory
 			# this array size requires.
 			#
-			if [ $free_mem -lt $actual_mem_use ]; then
+			if [[ $free_mem -lt $actual_mem_use ]]; then
 				echo Requested size, ${cache_size_kb}K, is too large.
 				continue
 			fi
