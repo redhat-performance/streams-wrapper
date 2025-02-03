@@ -159,6 +159,20 @@ build_images()
  					continue
 				fi
  			fi
+			total_freemem=`free -k | grep Mem: | awk '{print $7}'`
+			free_mem=`echo \($total_freemem/100\)*90 | bc`
+			#
+			# We are using arrays of 8 byte elements, and there are 3 of them.
+			#
+			actual_mem_use=`echo $cache_size_kb*24 | bc`
+			#
+			# Do not build if the free_mem is less then the amount of memory
+			# this array size requires.
+			#
+			if [ $free_mem -lt $actual_mem_use ]; then
+				echo Requested size, ${cache_size_kb}K, is too large.
+				continue
+			fi
 
 			CC_CMD="gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic"
 			echo $CC_CMD >> streams_build_options
