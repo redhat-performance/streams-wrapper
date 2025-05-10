@@ -104,6 +104,7 @@ process_results()
 		echo "$item" >> $data_file
 	done
 	sort -n -u -t : -k 3 -k 1  $data_file| grep -v ^buffer > ${data_file}.sorted
+	array_size=""
 	for asize in `cut -d':' -f 1 ${data_file}.sorted | sort -nu`; do
 		array_size=${array_size}":"${asize}
 	done
