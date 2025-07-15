@@ -536,13 +536,8 @@ else
 		fi
 	done
 	$TOOLS_BIN/validate_line --results_file ${curdir}/${results_dir}/streams_results/results_streams.csv --base_results_file $run_dir/base_test_results/test1/verify
-	if [[ $? -eq 1 ]]; then
-		echo Failed > test_results_report
-		rtc=1
-	else
-		echo Ran > test_results_report
-	fi
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results ${curdir}/${results_dir}/streams_results/results_streams.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user  --other_files "test_results_report" --copy_dir ${curdir}/${results_dir}/streams_results
+	rtc=$?
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results ${curdir}/${results_dir}/streams_results/results_streams.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user  --other_files "/tmp/test_results_report" --copy_dir ${curdir}/${results_dir}/streams_results
 	find $working_dir  -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
 fi
 exit $rtc
