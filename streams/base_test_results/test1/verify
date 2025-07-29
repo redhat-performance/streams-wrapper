@@ -2,26 +2,19 @@
 # Note we expect 4 numerical value fields (Array sizes)
 #
 # Main reg exp summary
-#   :[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}$
+#   :[1-9][0-9\.]{0,}:[1-9][0-9.\]{0,}:[1-9][0-9.\]{0,}:[1-9][0-9.\]{0,}$
 #   Field 1: Will match the test
-#   Field 2:  Non zero value
-#   Field 3:  Non zero value
-#   Field 4:  Non zero value
+#   Field 2: [1-9][0-9\.]: Matches any non zero value.
+#   Field 3: [1-9][0-9\.]: Matches any non zero value.
+#   Field 4: [1-9][0-9\.]: Matches any non zero value.
+#   Field 4: [1-9][0-9\.]: Matches any non zero value.
 #
-# Detailed description
-# <test>:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}$":
-#   <test>: Matches the test name, Copy, etc.
-#   Following is done 4 times.
-#   [1-9][0-9.]{0,}
-#      [1-9]: Matches a single digit from 1 to 9 (i.e., any non-zero digit).
-#      [0-9.]{0,}: Matches zero or more occurrences of either a digit (0-9) or a literal dot (.).
-#   $: This is an anchor that matches the end of the line.
 #
 %_grouping
 Socket
 Array sizes:
-Copy:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}$
-Scale:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}$
-Add:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}$
-Triad:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}:[1-9][0-9.]{0,}$
+Copy:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}$
+Scale:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}$
+Add:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}$
+Triad:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}:[1-9][0-9\.]{0,}$
 
