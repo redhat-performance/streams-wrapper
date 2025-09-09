@@ -375,8 +375,6 @@ fi
 # to_home_root: home directory
 # to_configuration: configuration information
 # to_times_to_run: number of times to run the test
-# to_pbench: Run the test via pbench
-# to_puser: User running pbench
 # to_run_label: Label for the run
 # to_user: User on the test system running the test
 # to_sys_type: for results info, basically aws, azure or local
@@ -500,54 +498,50 @@ while [[ $# -gt 0 ]]; do
 done
 
 front_meta_data_recorded=0
-if [ $to_pbench -eq 1 ]; then
-	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11 --pbench_stats $to_pstats
-else 
-	copy_dirs=""
-	copy_separ=""
-	set_up_test
-	if [[ $to_use_pcp -eq 1 ]]; then
-		pdir=/tmp/pcp_`date "+%Y.%m.%d-%H.%M.%S"`
-		pcp="--pcp ${pdir}"
-	fi
-	streams_run
-	cd $curdir
-	if [[ $results_dir == "" ]]; then
-		results_dir=results_streams_${tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
-		rm results_${test_name}_${tuned_setting} 2> /dev/null
-		mkdir ${results_dir}
-		ln -s ${results_dir} results_${test_name}_${tuned_setting}
-		mv /tmp/streams_results $results_dir
-	else
-		mkdir ${results_dir}
-		mv /tmp/streams_results $results_dir
-	fi
-	mv ${run_dir}/streams_build_options $results_dir
-	${curdir}/test_tools/move_data $curdir $results_dir
-	#
-	# report the results
-	#
-	pushd $results_dir/streams_results
-	rm results_${test_name}.csv 2> /dev/null
-	for rdir in `ls -d results_streams*`; do
-		if [ -d $rdir ]; then
-			copy_dirs=${copy_dirs}${copy_separ}$rdir
-			copy_separ=","
-			pushd $rdir > /dev/null
-			retrieve_results
-			uchars=`echo $rdir | awk -v RS='_' 'END{print NR}'`
-			opt_level=`echo $rdir | cut -d'_' -f ${uchars} | cut -d'-' -f2`
-			if [ $front_meta_data_recorded -eq 0 ]; then
-				$TOOLS_BIN/test_header_info --front_matter --results_file ../results_${test_name}.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $streams_wrapper_version --test_name $test_name
-				front_meta_data_recorded=1
-			fi
-			retrieve_sys_config $opt_level
-			process_results results_${test_name}.wrkr
-			rm results_${test_name}.wrkr 2> /dev/null
-			popd > /dev/null
-		fi
-	done
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results ${curdir}/${results_dir}/streams_results/results_streams.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user  --other_files "/tmp/test_results_report" --copy_dir "${curdir}/${results_dir}/streams_results $pdir"
-	find $working_dir  -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
+
+copy_dirs=""
+copy_separ=""
+set_up_test
+if [[ $to_use_pcp -eq 1 ]]; then
+	pdir=/tmp/pcp_`date "+%Y.%m.%d-%H.%M.%S"`
+	pcp="--pcp ${pdir}"
 fi
+streams_run
+cd $curdir
+if [[ $results_dir == "" ]]; then
+	results_dir=results_streams_${tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
+	rm results_${test_name}_${tuned_setting} 2> /dev/null
+	mkdir ${results_dir}
+	ln -s ${results_dir} results_${test_name}_${tuned_setting}
+	mv /tmp/streams_results $results_dir
+else
+	mkdir ${results_dir}
+	mv /tmp/streams_results $results_dir
+fi
+mv ${run_dir}/streams_build_options $results_dir
+${curdir}/test_tools/move_data $curdir $results_dir
+#
+# report the results
+#
+pushd $results_dir/streams_results
+rm results_${test_name}.csv 2> /dev/null
+for rdir in `ls -d results_streams*`; do
+	if [ -d $rdir ]; then
+		copy_dirs=${copy_dirs}${copy_separ}$rdir
+		copy_separ=","
+		pushd $rdir > /dev/null
+		retrieve_results
+		uchars=`echo $rdir | awk -v RS='_' 'END{print NR}'`
+		opt_level=`echo $rdir | cut -d'_' -f ${uchars} | cut -d'-' -f2`
+		if [ $front_meta_data_recorded -eq 0 ]; then
+			$TOOLS_BIN/test_header_info --front_matter --results_file ../results_${test_name}.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $streams_wrapper_version --test_name $test_name
+			front_meta_data_recorded=1
+		fi
+		retrieve_sys_config $opt_level
+		process_results results_${test_name}.wrkr
+		rm results_${test_name}.wrkr 2> /dev/null
+		popd > /dev/null
+	fi
+done
+${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results ${curdir}/${results_dir}/streams_results/results_streams.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user  --other_files "/tmp/test_results_report" --copy_dir "${curdir}/${results_dir}/streams_results $pdir"
 exit 0
