@@ -523,7 +523,7 @@ ${curdir}/test_tools/move_data $curdir $results_dir
 #
 # report the results
 #
-pushd $results_dir/streams_results
+pushd $results_dir/streams_results > /dev/null
 rm results_${test_name}.csv 2> /dev/null
 for rdir in `ls -d results_streams*`; do
 	if [ -d $rdir ]; then
