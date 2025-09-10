@@ -323,7 +323,7 @@ do
 			if [[ $pcp -eq 1 ]]; then
 		        	echo "Send result to PCP archive"
 				out="${stream_size}_iter_${test_iters}"
-        			result2pcp iterations_sec ${out}
+        			result2pcp iteration_${iteration} ${out}
 	        		stop_pcp_subset
 			fi
 
