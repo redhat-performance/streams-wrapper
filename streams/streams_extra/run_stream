@@ -48,7 +48,7 @@ ARGUMENT_LIST=(
 	"iterations"
 	"numb_sizes"
 	"optimize_lvl"
-        "pcpdir"
+	"pcpdir"
 	"results_dir"
 	"size_list"
 	"thread_multiply"
