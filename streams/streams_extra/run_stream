@@ -34,6 +34,8 @@ cache_cap_size=0
 host=`hostname`
 size_list="0"
 top_dir=`pwd`
+pcp=0
+pcpdir=""
 
 #
 # Define options
@@ -46,6 +48,7 @@ ARGUMENT_LIST=(
 	"iterations"
 	"numb_sizes"
 	"optimize_lvl"
+	"pcpdir"
 	"results_dir"
 	"size_list"
 	"thread_multiply"
@@ -98,7 +101,11 @@ while [[ $# -gt 0 ]]; do
 			optim=${2}
 			shift 2
 		;;
-			
+		--pcpdir)
+			pcpdir=${2}
+			pcp=1
+			shift 2
+		;;
 		--results_dir)
 			echo setting result dir
 			resultdir=${2}
@@ -129,6 +136,13 @@ while [[ $# -gt 0 ]]; do
 		;;
 	esac
 done
+
+if [[ $pcp -eq 1 ]]; then
+	source $TOOLS_BIN/pcp/pcp_commands.inc
+	setup_pcp
+	pcp_cfg=$TOOLS_BIN/pcp/default.cfg
+fi
+
 
 build_images()
 {
@@ -283,12 +297,20 @@ do
 	separ=","
 	echo Running on cpus: $cpus_use
 	export GOMP_CPU_AFFINITY=$cpus_use
+	if [[ $pcp -eq 1 ]]; then
+		echo "Start PCP"
+		start_pcp ${pcpdir}/ streams $pcp_cfg
+	fi
 	for iteration in $(seq 1 1 ${iterations})
 	do
 		for stream_size in $streams_exec
 		do
 			total_sockets=$[$sockets_add]
 			resfile=${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
+
+			if [[ $pcp -eq 1 ]]; then
+				start_pcp_subset
+			fi
 			if [[ $resultdir != "" ]]; then
 				lscpu >> ${resultdir}/$resfile
 				echo GOMP_CPU_AFFINITY: $cpus_use >> ${resultdir}/${resfile}
@@ -298,6 +320,17 @@ do
 				./${stream_size}
 				echo GOMP_CPU_AFFINITY: $cpus_use
 			fi
+			if [[ $pcp -eq 1 ]]; then
+		        	echo "Send result to PCP archive"
+				out="${stream_size}_iter_${test_iters}"
+        			result2pcp iteration_${iteration} ${out}
+	        		stop_pcp_subset
+			fi
+
 		done
 	done
 done
+if [[ $pcp -eq 1 ]]; then
+	shutdown_pcp
+fi
+
