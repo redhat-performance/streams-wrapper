@@ -393,6 +393,14 @@ if [ ! -f "/tmp/${test_name}.out" ]; then
 	${TOOLS_BIN}/invoke_test --test_name ${test_name} --command ${0} --options "${arguments}"
 	exit $?
 fi
+#
+# Install required packaging.
+#
+${TOOLS_BIN}/package_tool --wrapper_config ${run_dir}/streams.json --no_packages $to_no_pkg_install
+if [[ $? -ne 0 ]]; then
+                echo Packaging installed failed.
+                exit 1
+fi
 
 #
 # Define user options
