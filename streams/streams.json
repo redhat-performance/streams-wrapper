@@ -1,0 +1,40 @@
+{
+    "dependencies": {
+        "amzn": [
+            "gcc",
+            "bc",
+            "git",
+            "zip",
+            "unzip",
+            "numactl"
+        ],
+        "rhel": [
+            "gcc",
+            "bc",
+            "perf",
+            "zip",
+            "unzip",
+            "numactl"
+        ],
+        "sles": [
+            "gcc",
+            "make",
+            "bc",
+            "perf",
+            "git",
+            "unzip",
+            "zip",
+            "libnuma1",
+            "numactl"
+        ],
+        "ubuntu": [
+            "bc",
+            "zip",
+            "unzip",
+            "numactl",
+	    "libnuma-dev"
+        ],
+        "pip": [
+        ]
+    }
+}
