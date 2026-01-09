@@ -334,15 +334,16 @@ do
 				echo GOMP_CPU_AFFINITY: $cpus_use
 			fi
 			if [[ $pcp -eq 1 ]]; then
-		        	echo "Send result to PCP archive"
+				result2pcp iteration $iteration
 				record_pcp_results Copy ${resultdir}/${resfile}
 				record_pcp_results Scale ${resultdir}/${resfile}
 				record_pcp_results Add ${resultdir}/${resfile}
 				record_pcp_results Triad ${resultdir}/${resfile}
-	      			stop_pcp_subset
+				stop_pcp_subset
 			fi
 		done
 	if [[ $pcp -eq 1 ]]; then
+		stop_pcp
 		shutdown_pcp
 	fi
 	done
