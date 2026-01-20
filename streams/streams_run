@@ -183,7 +183,7 @@ retrieve_line()
 	items=0
 	calc_line=""
 
-	info=`grep "${search_for}" ${file}* | tr -s " " | sed "s/ /:/g" | sed "s/::/:/g" | cut -d: -f 2`
+	info=`grep "${search_for}" ${file}* | tr -s " " | sed "s/ /:/g" | tr -s ':' | cut -d: -f 2`
 
 	for i in $info; do
 		if [ $items -eq 0 ]; then
