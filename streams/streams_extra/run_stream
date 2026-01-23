@@ -294,7 +294,7 @@ record_pcp_results()
 	test=$1
 	results=$2
 	value=`grep ^${test}: $results | awk '{print $2}'`
-	result2pcp ${test} ${value}
+	results2pcp_add_value "${test}:${value}"
 }
 
 for sockets_add in 1 `seq 2 1 ${numa_nodes}`
@@ -334,17 +334,18 @@ do
 				echo GOMP_CPU_AFFINITY: $cpus_use
 			fi
 			if [[ $pcp -eq 1 ]]; then
-				result2pcp iteration $iteration
-				record_pcp_results Copy ${resultdir}/${resfile}
-				record_pcp_results Scale ${resultdir}/${resfile}
-				record_pcp_results Add ${resultdir}/${resfile}
-				record_pcp_results Triad ${resultdir}/${resfile}
+				results2pcp_add_value "iteration:$iteration"
+				for i in Copy Scale Add Triad; do
+					record_pcp_results $i ${resultdir}/${resfile}
+				done
+				results2pcp_add_value_commit
+				reset_pcp_om
 				stop_pcp_subset
 			fi
 		done
-	if [[ $pcp -eq 1 ]]; then
-		stop_pcp
-		shutdown_pcp
-	fi
+		if [[ $pcp -eq 1 ]]; then
+			stop_pcp
+			shutdown_pcp
+		fi
 	done
 done
