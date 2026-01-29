@@ -4,6 +4,8 @@ numthreads 0
 runtime NaN
 throughput NaN
 latency NaN
+array_size NaN
+sockets NaN
 Add NaN
 Copy NaN
 Scale NaN

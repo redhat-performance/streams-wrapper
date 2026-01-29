@@ -297,6 +297,14 @@ record_pcp_results()
 	results2pcp_add_value "${test}:${value}"
 }
 
+if [[ $pcp -eq 1 ]]; then
+	echo "Start PCP"
+	mkdir -p $pcpdir
+	pcp_out=streams_opt_level_${optim}
+	setup_pcp
+	start_pcp ${pcpdir}/ $pcp_out $pcp_cfg
+fi
+
 for sockets_add in 1 `seq 2 1 ${numa_nodes}`
 do
 	worker=`echo ${numb_threads}*${sockets_add} | bc`
@@ -310,13 +318,6 @@ do
 	for stream_size in $streams_exec
 	do
 		total_sockets=$[$sockets_add]
-		if [[ $pcp -eq 1 ]]; then
-			echo "Start PCP"
-			mkdir -p $pcpdir
-			pcp_out=streams_size_${stream_size}_opt_level_${optim}_threads_${OMP_NUM_THREADS}_sockets_${total_sockets}
-			setup_pcp
-			start_pcp ${pcpdir}/ $pcp_out $pcp_cfg
-		fi
 		for iteration in $(seq 1 1 ${iterations})
 		do
 			if [[ $pcp -eq 1 ]]; then
@@ -335,6 +336,10 @@ do
 			fi
 			if [[ $pcp -eq 1 ]]; then
 				results2pcp_add_value "iteration:$iteration"
+				asize=`echo $stream_size | cut -d'.'  -f2 | sed "s/k//g"`
+				results2pcp_add_value "array_size:$asize"
+				results2pcp_add_value "numthreads:${OMP_NUM_THREADS}"
+				results2pcp_add_value "sockets:${total_sockets}"
 				for i in Copy Scale Add Triad; do
 					record_pcp_results $i ${resultdir}/${resfile}
 				done
@@ -343,9 +348,9 @@ do
 				stop_pcp_subset
 			fi
 		done
-		if [[ $pcp -eq 1 ]]; then
-			stop_pcp
-			shutdown_pcp
-		fi
 	done
 done
+if [[ $pcp -eq 1 ]]; then
+	stop_pcp
+	shutdown_pcp
+fi
