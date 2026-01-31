@@ -21,6 +21,8 @@ arguments="$@"
 array_size=""
 streams_wrapper_version=1.0
 curdir=`pwd`
+start_time=""
+end_time=""
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
@@ -35,6 +37,8 @@ else
 fi
 
 test_name="streams"
+export run_dir
+export test_name
 #
 # streams arguments
 #
@@ -59,10 +63,10 @@ process_list()
 {
 	echo $number_sockets Socket >> ../results_${test_name}.csv
 	echo "Array sizes"$array_size >> ../results_${test_name}.csv
-	echo Copy:$copy >> ../results_${test_name}.csv
-	echo Scale:$scale >> ../results_${test_name}.csv
-	echo Add:$add >> ../results_${test_name}.csv
-	echo Triad:$triad >> ../results_${test_name}.csv
+	echo Copy,$copy,$start_time,$end_time >> ../results_${test_name}.csv
+	echo Scale,$scale,$start_time,$end_time >> ../results_${test_name}.csv
+	echo Add,$add,$start_time,$end_time >> ../results_${test_name}.csv
+	echo Triad,$triad,$start_time,$end_time >> ../results_${test_name}.csv
 	echo "" >> ../results_${test_name}.csv
 	line_size=`echo $copy | wc -c`
 	if [ $line_size -lt 2 ]; then
@@ -108,8 +112,9 @@ process_results()
 	sort -n -u -t : -k 3 -k 1  $data_file| grep -v ^buffer > ${data_file}.sorted
 	array_size=""
 	for asize in `cut -d':' -f 1 ${data_file}.sorted | sort -nu`; do
-		array_size=${array_size}":"${asize}
+		array_size=${array_size}","${asize}
 	done
+	array_size="${array_size}",Start_Date,End_Date
 
 	#
 	# We have the data sorted, now go through things.  Each jump in number of sockets
@@ -160,7 +165,7 @@ process_results()
 		add=${add}${separ}$val
 		val=`echo $line | cut -d: -f 7`
 		triad=${triad}${separ}$val
-		separ=":"
+		separ=","
 	done < ${data_file}.sorted
 	rm ${data_file}.sorted 2> /dev/null
 	process_list
@@ -183,7 +188,7 @@ retrieve_line()
 	items=0
 	calc_line=""
 
-	info=`grep "${search_for}" ${file}* | tr -s " " | sed "s/ /:/g" | cut -d: -f  4`
+	info=`grep -h "${search_for}:" ${file}* | tr -s " " | sed "s/ /:/g" | tr -s ':' | cut -d: -f 2`
 
 	for i in $info; do
 		if [ $items -eq 0 ]; then
@@ -514,7 +519,16 @@ if [[ $to_use_pcp -eq 1 ]]; then
 	pdir=/tmp/pcp_`date "+%Y.%m.%d-%H.%M.%S"`
 	pcp="--pcp ${pdir}"
 fi
+#
+# We will need to revamp how the run is done and data is recorded to get
+# a more accurate view of run times.  Goal right now is to simply update the
+# results file with the time stamps.  How we output the results to the csv
+# file may have to change, but that is beyond the scope of the current work
+# of simply putting in timestamps
+#
+start_time=$(retrieve_time_stamp)
 streams_run
+end_time=$(retrieve_time_stamp)
 cd $curdir
 if [[ $results_dir == "" ]]; then
 	results_dir=results_streams_${tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")

@@ -287,6 +287,24 @@ echo Opt_lvl: $optim
 echo numa_nodes $numa_nodes
 cpus_use=""
 separ=""
+pcp_out=0
+
+record_pcp_results()
+{
+	test=$1
+	results=$2
+	value=`grep ^${test}: $results | awk '{print $2}'`
+	results2pcp_add_value "${test}:${value}"
+}
+
+if [[ $pcp -eq 1 ]]; then
+	echo "Start PCP"
+	mkdir -p $pcpdir
+	pcp_out=streams_opt_level_${optim}
+	setup_pcp
+	start_pcp ${pcpdir}/ $pcp_out $pcp_cfg
+fi
+
 for sockets_add in 1 `seq 2 1 ${numa_nodes}`
 do
 	worker=`echo ${numb_threads}*${sockets_add} | bc`
@@ -297,20 +315,16 @@ do
 	separ=","
 	echo Running on cpus: $cpus_use
 	export GOMP_CPU_AFFINITY=$cpus_use
-	if [[ $pcp -eq 1 ]]; then
-		echo "Start PCP"
-		start_pcp ${pcpdir}/ streams $pcp_cfg
-	fi
-	for iteration in $(seq 1 1 ${iterations})
+	for stream_size in $streams_exec
 	do
-		for stream_size in $streams_exec
+		total_sockets=$[$sockets_add]
+		for iteration in $(seq 1 1 ${iterations})
 		do
-			total_sockets=$[$sockets_add]
-			resfile=${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
-
 			if [[ $pcp -eq 1 ]]; then
 				start_pcp_subset
 			fi
+			resfile=${stream_size}.out.threads_${OMP_NUM_THREADS}.numb_sockets_${total_sockets}_iter_${iteration}
+
 			if [[ $resultdir != "" ]]; then
 				lscpu >> ${resultdir}/$resfile
 				echo GOMP_CPU_AFFINITY: $cpus_use >> ${resultdir}/${resfile}
@@ -321,16 +335,22 @@ do
 				echo GOMP_CPU_AFFINITY: $cpus_use
 			fi
 			if [[ $pcp -eq 1 ]]; then
-		        	echo "Send result to PCP archive"
-				out="${stream_size}_iter_${test_iters}"
-        			result2pcp iteration_${iteration} ${out}
-	        		stop_pcp_subset
+				results2pcp_add_value "iteration:$iteration"
+				asize=`echo $stream_size | cut -d'.'  -f2 | sed "s/k//g"`
+				results2pcp_add_value "array_size:$asize"
+				results2pcp_add_value "numthreads:${OMP_NUM_THREADS}"
+				results2pcp_add_value "sockets:${total_sockets}"
+				for i in Copy Scale Add Triad; do
+					record_pcp_results $i ${resultdir}/${resfile}
+				done
+				results2pcp_add_value_commit
+				reset_pcp_om
+				stop_pcp_subset
 			fi
-
 		done
 	done
 done
 if [[ $pcp -eq 1 ]]; then
+	stop_pcp
 	shutdown_pcp
 fi
-
