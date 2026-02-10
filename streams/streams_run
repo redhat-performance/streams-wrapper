@@ -18,6 +18,8 @@
 #
 
 arguments="$@"
+csv_file=""
+script_dir=$(realpath $(dirname $0))
 array_size=""
 streams_wrapper_version=1.0
 curdir=`pwd`
@@ -61,19 +63,27 @@ pdir=""
 
 process_list()
 {
-	echo $number_sockets Socket >> ../results_${test_name}.csv
-	echo "Array sizes"$array_size >> ../results_${test_name}.csv
-	echo Copy,$copy,$start_time,$end_time >> ../results_${test_name}.csv
-	echo Scale,$scale,$start_time,$end_time >> ../results_${test_name}.csv
-	echo Add,$add,$start_time,$end_time >> ../results_${test_name}.csv
-	echo Triad,$triad,$start_time,$end_time >> ../results_${test_name}.csv
-	echo "" >> ../results_${test_name}.csv
-	line_size=`echo $copy | wc -c`
-	if [ $line_size -lt 2 ]; then
-		echo Failed >> /tmp/test_results_report
-	else
-		echo Ran >> /tmp/test_results_report
+	echo "# $number_sockets Socket" >> $csv_file
+	echo "Array_sizes"$array_size >> $csv_file
+	echo Copy,$copy,$start_time,$end_time >> $csv_file
+	echo Scale,$scale,$start_time,$end_time >> $csv_file
+	echo Add,$add,$start_time,$end_time >> $csv_file
+	echo Triad,$triad,$start_time,$end_time >> $csv_file
+	echo "" >> $csv_file
+	#
+	# Due to we are transposing the csv file, we need to remove the 
+	# timestamps from the end, else we will get Copy: <date> as a field
+	# to check.
+	#
+	tmpfile=$(mktemp /tmp/streams_reduce_.XXXXXX)
+	cut -d',' -f1-4 $csv_file > $tmpfile
+	${TOOLS_BIN}/csv_to_json $to_json_flags --transpose --csv_file $tmpfile --output_file results_streams.json
+	${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $script_dir/results_schema.py --class_name Streams_Results --file results_streams.json
+	if [[ $? -ne 0 ]]; then
+		rtc=1
 	fi
+	rm $tmpfile
+	rm -f results_streams.json
 }
 
 process_results()
@@ -134,7 +144,6 @@ process_results()
 		else
 			if [ $current_socket -ne $number_sockets ]; then
 				process_list
-				field_index=1
 			fi
 			number_sockets=$current_socket
 		fi
@@ -248,7 +257,8 @@ retrieve_results()
 retrieve_sys_config()
 {
 	streams_vers=`grep "^STREAM version" stream* | cut -d':' -f 3 | cut -d' ' -f2 | sort -u`
-	$TOOLS_BIN/test_header_info --results_file ../results_${test_name}.csv --host $to_configuration --sys_type $to_sys_type \
+	csv_file=../results_${test_name}_opt_$1.csv
+	$TOOLS_BIN/test_header_info --results_file $csv_file --host $to_configuration --sys_type $to_sys_type \
           --tuned $to_tuned_setting --results_version $streams_wrapper_version --test_name $test_name \
 	  --meta_output "Optimization level: ${1}" \
 	  --meta_output "kernel_rev "`grep "^kernel:" stream* | cut -d: -f 3 | sort -u`" \
@@ -314,6 +324,8 @@ streams_run()
 	fi
 }
 
+TOOLS_BIN="${HOME}/test_tools"
+export TOOLS_BIN
 tools_git=https://github.com/redhat-performance/test_tools-wrappers
 usage()
 {
@@ -332,7 +344,7 @@ usage()
 	echo "--size_list <x,y...>:  List of array sizes in byte"
 	echo "--threads_multiple <value>: Multiply number threads by <value>. Default is 2"
 	echo "--tools_git <value>: git repo to retrieve the required tools from, default is ${tools_git}"
-	source test_tools/general_setup --usage
+	source ${TOOLS_BIN}/general_setup --usage
 }
 
 
@@ -359,8 +371,8 @@ for arg in "$@"; do
 	fi
 done
 
-if [ ! -d "test_tools" ]; then
-        git clone $tools_git test_tools
+if [ ! -d "${TOOLS_BIN}" ]; then
+        git clone $tools_git ${TOOLS_BIN}
         if [ $? -ne 0 ]; then
                 echo pulling git $tools_git failed.
                 exit 1
@@ -387,13 +399,12 @@ fi
 # to_tuned_setting: tuned setting
 #
 
-${curdir}/test_tools/gather_data ${curdir}
+${TOOLS_BIN}/gather_data ${curdir}
 #
 # We want a default of 5 iterations
 #
-source test_tools/general_setup "$@" --iteration_default 5
+source ${TOOLS_BIN}/general_setup "$@" --iteration_default 5
 
-export TOOLS_BIN
 if [ ! -f "/tmp/${test_name}.out" ]; then
 	${TOOLS_BIN}/invoke_test --test_name ${test_name} --command ${0} --options "${arguments}"
 	exit $?
@@ -541,12 +552,11 @@ else
 	mv /tmp/streams_results $results_dir
 fi
 mv ${run_dir}/streams_build_options $results_dir
-${curdir}/test_tools/move_data $curdir $results_dir
+${TOOLS_BIN}/move_data $curdir $results_dir
 #
 # report the results
 #
 pushd $results_dir/streams_results > /dev/null
-rm results_${test_name}.csv 2> /dev/null
 for rdir in `ls -d results_streams*`; do
 	if [ -d $rdir ]; then
 		copy_dirs=${copy_dirs}${copy_separ}$rdir
@@ -555,15 +565,12 @@ for rdir in `ls -d results_streams*`; do
 		retrieve_results
 		uchars=`echo $rdir | awk -v RS='_' 'END{print NR}'`
 		opt_level=`echo $rdir | cut -d'_' -f ${uchars} | cut -d'-' -f2`
-		if [ $front_meta_data_recorded -eq 0 ]; then
-			$TOOLS_BIN/test_header_info --front_matter --results_file ../results_${test_name}.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $streams_wrapper_version --test_name $test_name
-			front_meta_data_recorded=1
-		fi
 		retrieve_sys_config $opt_level
 		process_results results_${test_name}.wrkr
 		rm results_${test_name}.wrkr 2> /dev/null
 		popd > /dev/null
 	fi
 done
-${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results ${curdir}/${results_dir}/streams_results/results_streams.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user  --other_files "/tmp/test_results_report" --copy_dir "${curdir}/${results_dir}/streams_results $pdir"
-exit 0
+
+${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user  --other_files "/tmp/test_results_report" --copy_dir "${curdir}/${results_dir}/streams_results $pdir"
+exit $rtc
