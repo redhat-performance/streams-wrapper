@@ -57,6 +57,21 @@ test_name="streams"
 pcp=""
 pdir=""
 
+TOOLS_BIN="${HOME}/test_tools"
+export TOOLS_BIN
+tools_git=https://github.com/redhat-performance/test_tools-wrappers
+
+if [ ! -d "${TOOLS_BIN}" ]; then
+        git clone $tools_git ${TOOLS_BIN}
+        if [ $? -ne 0 ]; then
+                echo pulling git $tools_git failed.
+                exit 101
+        fi
+else
+	echo Found an existing test_tools directory, using it.
+fi
+source ${TOOLS_BIN}/error_codes
+
 #
 # Report results
 #
@@ -78,9 +93,16 @@ process_list()
 	tmpfile=$(mktemp /tmp/streams_reduce_.XXXXXX)
 	cut -d',' -f1-4 $csv_file > $tmpfile
 	${TOOLS_BIN}/csv_to_json $to_json_flags --transpose --csv_file $tmpfile --output_file results_streams.json
+	lrtc=$?
+	if [[ $lrtc -ne 0 ]]; then
+		echo "Verification of streams data failed"
+		exit $lrtc
+	fi	
 	${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $script_dir/results_schema.py --class_name Streams_Results --file results_streams.json
-	if [[ $? -ne 0 ]]; then
-		rtc=1
+	lrtc=$?
+	if [[ $lrtc -ne 0 ]]; then
+		echo Verification of streams data failed.
+		rtc=$ltrc
 	fi
 	rm $tmpfile
 	rm -f results_streams.json
@@ -324,9 +346,7 @@ streams_run()
 	fi
 }
 
-TOOLS_BIN="${HOME}/test_tools"
-export TOOLS_BIN
-tools_git=https://github.com/redhat-performance/test_tools-wrappers
+
 usage()
 {
 	echo Usage ${1}:
@@ -370,18 +390,6 @@ for arg in "$@"; do
 		show_usage=1
 	fi
 done
-
-if [ ! -d "${TOOLS_BIN}" ]; then
-        git clone $tools_git ${TOOLS_BIN}
-        if [ $? -ne 0 ]; then
-                echo pulling git $tools_git failed.
-                exit 101
-        fi
-else
-	echo Found an existing test_tools directory, using it.
-fi
-source ${TOOLS_BIN}/error_codes
-
 if [ $show_usage -eq 1 ]; then
 	usage $0
 fi
@@ -414,9 +422,10 @@ fi
 # Install required packaging.
 #
 ${TOOLS_BIN}/package_tool --wrapper_config ${run_dir}/streams.json --no_packages $to_no_pkg_install
-if [[ $? -ne 0 ]]; then
-                echo Packaging installed failed.
-                exit $E_PACKAGE_TOOL_PACKAGING
+lrtc=$?
+if [[ $? -ne $lrtc ]]; then
+	echo Packaging installed failed.
+	exit $lrtc
 fi
 
 #
