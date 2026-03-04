@@ -308,7 +308,7 @@ run_stream()
 	./run_stream --cache_cap_size ${cache_cap_size} --iterations ${to_times_to_run}  --cache_start_size $cache_start_factor --optimize_lvl ${1} --cache_multiply $cache_multiply --numb_sizes $nsizes --thread_multiply $threads_multiple --results_dir ${results_dir} --host ${to_configuration} --size_list ${size_list} --top_dir $curdir > /tmp/streams_results/${2}_opt_${1} $pcp
 	if [ $? -ne 0 ]; then
 		echo "Execution of run stream failed."
-		exit 1
+		exit $E_GENERAL
 	fi
 	mv ${results_dir}_* /tmp/streams_results
 	cd ..
@@ -375,11 +375,12 @@ if [ ! -d "${TOOLS_BIN}" ]; then
         git clone $tools_git ${TOOLS_BIN}
         if [ $? -ne 0 ]; then
                 echo pulling git $tools_git failed.
-                exit 1
+                exit 101
         fi
 else
 	echo Found an existing test_tools directory, using it.
 fi
+source ${TOOLS_BIN}/error_codes
 
 if [ $show_usage -eq 1 ]; then
 	usage $0
@@ -415,7 +416,7 @@ fi
 ${TOOLS_BIN}/package_tool --wrapper_config ${run_dir}/streams.json --no_packages $to_no_pkg_install
 if [[ $? -ne 0 ]]; then
                 echo Packaging installed failed.
-                exit 1
+                exit $E_PACKAGE_TOOL_PACKAGING
 fi
 
 #
@@ -461,7 +462,7 @@ while [[ $# -gt 0 ]]; do
 			cache_multiply=$2		
 			if [ $cache_multiply -lt 2 ]; then
 				echo Error: cache multiply by must be greater then 1.
-				exit 1
+				exit $E_GENERAL
 			fi
 			shift 2
 		;;
@@ -469,7 +470,7 @@ while [[ $# -gt 0 ]]; do
 			cache_start_factor=$2		
 			if [ $cache_start_factor -lt 1 ]; then
 				echo Error: cache start factor must be greater then 0.
-				exit 1
+				exit $E_GENERAL
 			fi
 			shift 2
 		;;
@@ -497,7 +498,7 @@ while [[ $# -gt 0 ]]; do
 			threads_multiple=${2}
 			if [ $threads_multiple -lt 2 ]; then
 				echo Error: threads_multiple must be greater then 1.
-				exit 1
+				exit $E_GENERAL
 			fi
 			shift 2
 		;;
