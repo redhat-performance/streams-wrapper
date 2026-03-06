@@ -37,6 +37,7 @@ top_dir=`pwd`
 pcp=0
 pcpdir=""
 
+source ${TOOLS_BIN}/error_codes
 #
 # Define options
 #
@@ -129,7 +130,7 @@ while [[ $# -gt 0 ]]; do
 		;;
 		--usage)
 			echo usage to come
-			exit
+			exit $E_USAGE
 		;;
 		--)
 			break;
@@ -194,7 +195,7 @@ build_images()
 			if [ $? -ne 0 ]; then
 				if [ -z "$streams_exec" ]; then
 					echo Compilation of streams failed.
-					exit 1
+					exit $E_GENERAL
 				else
 					echo Could not compile streams with $use_cache size, skipping
 				fi
@@ -224,7 +225,7 @@ build_images()
 			gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${test_size} stream_omp_5_10.c -o ${stream} -fno-pic
 			if [ $? -ne 0 ]; then
 				echo Compilation of streams failed.
-				exit 1
+				exit $E_GENERAL
 			fi
 		done
 	fi
@@ -354,3 +355,4 @@ if [[ $pcp -eq 1 ]]; then
 	stop_pcp
 	shutdown_pcp
 fi
+exit $E_SUCCESS
