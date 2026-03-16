@@ -1,241 +1,231 @@
-# STREAM Wrapper Quick Start Guide
+# STREAM Memory Bandwidth Benchmark Wrapper
 
-## Installation
+## Description
 
-```bash
-git clone https://github.com/redhat-performance/streams-wrapper
-cd streams-wrapper/streams
+This wrapper automates running the STREAM memory bandwidth benchmark written by John D. McCalpin and Joe R. Zagar. The STREAM benchmark measures sustained memory bandwidth (in MB/s) for simple vector kernels.
+
+The wrapper provides:
+- Automated execution across multiple cache sizes and thread counts
+- Support for different compiler optimization levels (O2, O3)
+- Result collection, processing, and verification
+- CSV and JSON output formats
+- System configuration metadata capture
+- Integration with test_tools framework
+- Optional Performance Co-Pilot (PCP) integration
+
+## What the Script Does
+
+The `streams_run` script performs the following workflow:
+
+1. **Environment Setup**:
+   - Clones the test_tools-wrappers repository if not present (default: ~/test_tools)
+   - Sources error codes and general setup utilities
+
+2. **Package Installation**:
+   - Installs required dependencies via package_tool (gcc, bc, numactl, etc.)
+   - Dependencies are defined in streams.json for different OS variants (RHEL, Ubuntu, SLES, Amazon Linux)
+
+3. **Test Execution**:
+   - Runs STREAM benchmark with configurable parameters:
+     - Multiple array sizes (based on cache size multipliers)
+     - Multiple thread counts (based on thread multipliers)
+     - Different optimization levels (O2 and/or O3)
+   - Executes via the run_stream helper script
+
+4. **Data Collection**:
+   - Captures system configuration (CPU count, cores per socket, NUMA nodes, kernel version, memory)
+   - Records STREAM version information
+   - Logs timestamps for each test run
+
+5. **Result Processing**:
+   - Aggregates results from multiple runs and iterations
+   - Averages results across iterations
+   - Sorts data by socket count and array size
+   - Generates CSV files with Copy, Scale, Add, and Triad bandwidth rates
+   - Creates transposed JSON output for verification
+
+6. **Verification**:
+   - Validates results against Pydantic schema (results_schema.py)
+   - Ensures all bandwidth values are greater than 0
+   - Uses csv_to_json and verify_results from test_tools
+
+7. **Output**:
+   - Creates timestamped results directory: `results_streams_<tuned_setting>_<YYYYMMDDHHMMSS>`
+   - Saves all raw output files, processed CSV/JSON, and system metadata
+   - Optionally saves PCP performance data
+   - Archives results to configured storage location
+
+## Dependencies
+
+Location of underlying workload: part of the github kit
+
+Packages required: gcc,bc,numactl
+
+To run:
+```
+[root@hawkeye ~]# git clone https://github.com/redhat-performance/streams-wrapper
+[root@hawkeye ~]# streams-wrapper/streams/streams_run
 ```
 
-## Basic Usage
+The script will set the buffer sizes based on the hardware it is being executed on.
 
-### Run with defaults (recommended for first time)
+## The STREAM Benchmark Kernels
+
+STREAM measures memory bandwidth using four simple vector operations:
+
+1. **Copy**: `a[i] = b[i]` - Measures read and write bandwidth
+2. **Scale**: `a[i] = q * b[i]` - Measures read, multiply, and write bandwidth
+3. **Add**: `a[i] = b[i] + c[i]` - Measures bandwidth with multiple reads
+4. **Triad**: `a[i] = b[i] + q * c[i]` - The most common operation in scientific codes
+
+Each operation is measured in MB/s. Higher values indicate better memory subsystem performance.
+
+## Results Schema
+
+The wrapper validates results using a Pydantic schema that requires:
+- **Array_sizes**: String describing the array sizes tested
+- **Copy**: Integer bandwidth > 0 (MB/s)
+- **Scale**: Integer bandwidth > 0 (MB/s)
+- **Add**: Integer bandwidth > 0 (MB/s)
+- **Triad**: Integer bandwidth > 0 (MB/s)
+
+## Output Files
+
+The results directory contains:
+
+- **results_streams_opt_O2.csv** / **results_streams_opt_O3.csv**: CSV files with bandwidth measurements organized by socket count and array size
+- **stream_\*.out**: Raw output files from individual STREAM runs
+- **streams_build_options**: Compiler options used for the build
+- **System metadata**: CPU info, memory, NUMA topology, kernel version
+- **PCP data** (if --pcp option used): Performance Co-Pilot monitoring data
+
+## Command-Line Options
+
+```
+Options
+--cache_multiply <value>: Multiply cache sizes by <value>. Default is 2
+--cache_start_factor <value>: Start the cache size at base cache * <value>
+    Default is 1
+--cache_cap_size <value>: Caps the size of cache to this value.  Default is no cap.
+--nsizes <value>:  Maximum number of cache sizes to do. Default is 4
+--opt2 <value>:  If value is not 0, then we will run with optimization level
+    2.  Default value is 1
+--opt3 <value>:  If value is not 0, then we will run with optimization level
+    3.  Default value is 1
+--results_dir <string>:  Directory to place results into.  Default is
+    results_streams_tuned_<tuned using>_<date>
+--size_list <x,y...>:  List of array sizes in byte
+--threads_multiple <value>: Multiply number threads by <value>. Default is 2
+--tools_git <value>: git repo to retrieve the required tools from, default is https://github.com/redhat-performance/test_tools-wrappers
+
+General options
+  --home_parent <value>: Our parent home directory.  If not set, defaults to current working directory.
+  --host_config <value>: default is the current host name.
+  --iterations <value>: Number of times to run the test, defaults to 1.
+  --pbench: use pbench-user-benchmark and place information into pbench, defaults to do not use.
+  --pbench_user <value>: user who started everything. Defaults to the current user.
+  --pbench_copy: Copy the pbench data, not move it.
+  --pbench_stats: What stats to gather. Defaults to all stats.
+  --run_label: the label to associate with the pbench run. No default setting.
+  --run_user: user that is actually running the test on the test system. Defaults to user running wrapper.
+  --sys_type: Type of system working with, aws, azure, hostname.  Defaults to hostname.
+  --sysname: name of the system running, used in determining config files.  Defaults to hostname.
+  --tuned_setting: used in naming the tar file, default for RHEL is the current active tuned.  For non
+    RHEL systems, default is none.
+  --usage: this usage message.
+```
+
+Note: The script does not install pbench for you.  You need to do that manually.
+
+## Examples
+
+### Basic run with defaults
 ```bash
 ./streams_run
 ```
-This will:
-- Run 5 iterations
-- Test with both O2 and O3 compiler optimizations
-- Auto-detect cache sizes and test 4 different array sizes
-- Scale thread counts by 2x at each step
-- Save results to `results_streams_<tuned>_<timestamp>/`
+This runs with:
+- Default 5 iterations
+- Both O2 and O3 optimization levels
+- 4 cache sizes (base cache × 1, 2, 4, 8)
+- Thread counts multiplied by 2 at each step
 
-### Check results
-Results are saved in timestamped directories. Example:
+### Run with specific cache sizes
 ```bash
-cd results_streams_throughput-performance_20260316103045/streams_results/
-ls -l
+./streams_run --size_list 1000000,5000000,10000000
 ```
+Tests specific array sizes (in bytes) instead of auto-calculated cache-based sizes.
 
-You'll find:
-- `results_streams_opt_O2.csv` - Results with -O2 optimization
-- `results_streams_opt_O3.csv` - Results with -O3 optimization
-- Raw output files: `stream_*.out`
-- System configuration metadata
-
-## Common Use Cases
-
-### 1. Quick Performance Check
+### Run only O3 optimization, skip O2
 ```bash
-./streams_run --iterations 3 --nsizes 2
+./streams_run --opt2 0 --opt3 1
 ```
-Runs faster with fewer iterations and array sizes.
 
-### 2. Thorough Benchmark
+### Run with more cache sizes and higher thread multiplier
 ```bash
-./streams_run --iterations 10 --nsizes 6 --threads_multiple 4
+./streams_run --nsizes 6 --threads_multiple 4
 ```
-More comprehensive testing with more data points.
+Tests 6 different cache sizes with threads multiplied by 4 at each step.
 
-### 3. Test Specific Array Sizes
-```bash
-./streams_run --size_list 10000000,50000000,100000000
-```
-Tests exactly the sizes you specify (in bytes).
-
-### 4. Only Test One Optimization Level
-```bash
-./streams_run --opt2 0 --opt3 1  # O3 only
-./streams_run --opt2 1 --opt3 0  # O2 only
-```
-
-### 5. Cap Array Size (for systems with large caches)
-```bash
-./streams_run --cache_cap_size 100000000
-```
-Limits testing to arrays ≤ 100MB.
-
-## Reading the Results
-
-### CSV Output Format
-```
-System_Name,Hostname
-Kernel,5.14.0-284.el9.x86_64
-...
-# 1 Socket
-Array_sizes,20000000,40000000,80000000,160000000,Start_Date,End_Date
-Copy,45123,44892,43234,42156,2026-03-16T10:00:00,2026-03-16T10:15:00
-Scale,43892,43654,42123,41032,...
-Add,48234,47892,46234,45123,...
-Triad,47123,46892,45234,44123,...
-```
-
-### Understanding the Numbers
-- **Copy**: Simple `a[i] = b[i]` - Basic read/write bandwidth
-- **Scale**: `a[i] = q * b[i]` - Read, multiply, write
-- **Add**: `a[i] = b[i] + c[i]` - Two reads, one write
-- **Triad**: `a[i] = b[i] + q * c[i]` - **Most important metric**
-
-All values in MB/s. Higher is better.
-
-### What's Good Performance?
-- **DDR4-2933**: ~20-25 GB/s per socket (Triad)
-- **DDR4-3200**: ~25-30 GB/s per socket (Triad)
-- **DDR5-4800**: ~35-45 GB/s per socket (Triad)
-
-Performance varies by CPU architecture, memory channels, and population.
-
-## Troubleshooting
-
-### Problem: Package installation fails
-**Solution**:
-```bash
-./streams_run --no_packages  # Skip package installation
-# Manually install: gcc bc numactl
-```
-
-### Problem: Results show 0 bandwidth
-**Causes**:
-- Array size too small (increase --cache_start_factor)
-- Compilation failed (check for gcc)
-- System under heavy load
-
-### Problem: Verification failed
-Check the results_streams.json file that was created during processing. Common issues:
-- One of the bandwidth values is 0 or negative
-- Results format doesn't match schema
-
-## Performance Tips
-
-1. **Run on idle system**: Close other applications for accurate results
-2. **Disable turbo boost**: For consistent, repeatable results
-   ```bash
-   echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo  # Intel
-   ```
-3. **Use same tuned profile**: When comparing results
-4. **Multiple iterations**: Use `--iterations 5` or higher for statistical confidence
-5. **Check NUMA policy**: May affect multi-socket results
-
-## Understanding Array Sizes
-
-### How Sizes Are Chosen
-By default, the script:
-1. Detects L3 cache size (e.g., 20 MB)
-2. Tests 4 sizes: 1x, 2x, 4x, 8x the cache (20MB, 40MB, 80MB, 160MB)
-
-### Why Multiple Sizes?
-- **Smaller than cache**: Tests cache bandwidth (very high)
-- **Similar to cache**: Tests cache-to-memory transition
-- **Larger than cache**: Tests main memory bandwidth (most relevant)
-
-### Choosing Custom Sizes
-```bash
-# Test transition from L3 to memory
-./streams_run --size_list $((20*1024*1024)),$((50*1024*1024)),$((100*1024*1024))
-```
-
-## Advanced Options
-
-### PCP Performance Monitoring
+### Run with PCP monitoring
 ```bash
 ./streams_run --pcp
 ```
-Requires Performance Co-Pilot installed. Captures system metrics during run.
+Collects Performance Co-Pilot data during the run.
 
-### Custom Results Directory
+### Cap maximum cache size
 ```bash
-./streams_run --results_dir my_benchmark_$(date +%Y%m%d)
+./streams_run --cache_cap_size 50000000
 ```
+Limits testing to arrays no larger than 50MB (useful for systems with large caches).
 
-### Change Test Tools Source
-```bash
-./streams_run --tools_git https://my-internal-git.com/test_tools.git
-```
+## How Cache Sizing Works
 
-### System Type Tagging
-```bash
-./streams_run --sys_type aws --sysname c5.metal
-```
-Useful for tracking results from different platforms.
+The script automatically calculates array sizes based on system cache hierarchy:
 
-## Example Workflows
+1. Detects base cache size from system
+2. Starting size = base cache × `--cache_start_factor` (default 1)
+3. Each subsequent size = previous size × `--cache_multiply` (default 2)
+4. Continues for `--nsizes` iterations (default 4)
+5. Stops if size exceeds `--cache_cap_size` (if set)
 
-### Weekly Performance Tracking
-```bash
-#!/bin/bash
-# run_weekly_stream.sh
-DATE=$(date +%Y%m%d)
-./streams_run \
-  --iterations 10 \
-  --results_dir /data/benchmarks/stream_${DATE} \
-  --host_config production_server_1
-```
+Example: With L3 cache of 20MB, defaults produce array sizes of 20MB, 40MB, 80MB, 160MB.
 
-### Before/After Tuning Comparison
-```bash
-# Baseline
-./streams_run --tuned_setting baseline --results_dir baseline_results
+## How Thread Scaling Works
 
-# Apply tuning changes...
-tuned-adm profile throughput-performance
+The script tests multiple thread configurations:
 
-# Compare
-./streams_run --tuned_setting optimized --results_dir optimized_results
-```
+1. Detects number of hardware threads
+2. Tests with increasing thread counts based on `--threads_multiple`
+3. Also tests configurations with different socket counts
 
-### Multi-System Comparison
-```bash
-# Run on each system
-for host in server1 server2 server3; do
-  ssh $host "cd streams-wrapper/streams && \
-    ./streams_run --host_config $host --results_dir /shared/results_$host"
-done
+This explores the memory bandwidth scaling characteristics across different levels of parallelism.
 
-# Compare results
-diff /shared/results_*/streams_results/results_streams_opt_O3.csv
-```
+## Integration with test_tools
 
-## Getting Help
+The wrapper integrates with the test_tools-wrappers framework:
 
-### View all options
-```bash
-./streams_run --usage
-```
+- **gather_data**: Collects system information
+- **general_setup**: Parses common options, handles tuned profile detection
+- **package_tool**: Installs required packages
+- **test_header_info**: Generates CSV headers with system metadata
+- **csv_to_json**: Converts results to JSON format
+- **verify_results**: Validates against Pydantic schema
+- **save_results**: Archives results to configured storage
+- **move_data**: Organizes output files
+- **invoke_test**: Handles test orchestration and logging
 
-### Check script version
-```bash
-grep streams_wrapper_version ./streams_run
-```
+## Return Codes
 
-### Report issues
-https://github.com/redhat-performance/streams-wrapper/issues
+The script uses standardized error codes from test_tools error_codes:
+- **0**: Success
+- **101**: Git clone failure
+- **E_GENERAL**: General execution errors (validation failures, test execution failures)
 
-## Key Files Reference
+Exit codes indicate specific failure points for automated testing workflows.
 
-| File | Purpose |
-|------|---------|
-| `streams_run` | Main wrapper script |
-| `stream_omp_5_10.c` | STREAM benchmark source code |
-| `streams.json` | Package dependencies by OS |
-| `results_schema.py` | Pydantic validation schema |
-| `streams_extra/run_stream` | Helper script that compiles and runs STREAM |
-| `README.md` | Full documentation |
-| `DEVELOPMENT.md` | Internal architecture docs |
+## Notes
 
-## Next Steps
-
-1. Run a basic test: `./streams_run`
-2. Review results in the generated CSV files
-3. Experiment with different array sizes and thread counts
-4. Compare O2 vs O3 optimization results
-5. Integrate into your performance testing workflow
+- The STREAM benchmark does not explicitly handle NUMA (Non-Uniform Memory Access) architectures
+- Results vary based on system load, so multiple iterations are recommended
+- Higher optimization levels (O3) generally produce better bandwidth numbers
+- Array sizes should be much larger than L3 cache to measure main memory bandwidth accurately
