@@ -97,9 +97,6 @@ Performance varies by CPU architecture, memory channels, and population.
 
 ## Troubleshooting
 
-### Problem: "git clone failed"
-**Solution**: Check network connectivity to https://github.com/redhat-performance/test_tools-wrappers
-
 ### Problem: Package installation fails
 **Solution**:
 ```bash
