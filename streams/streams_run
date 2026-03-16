@@ -359,7 +359,7 @@ usage()
 	echo "    2.  Default value is 1"
 	echo "--opt3 <value>:  If value is not 0, then we will run with optimization level"
 	echo "    3.  Default value is 1"
-	echo "--result_dir <string>:  Directory to place results into.  Default is"
+	echo "--results_dir <string>:  Directory to place results into.  Default is"
 	echo "    results_streams_tuned_<tuned using>_<date>"
 	echo "--size_list <x,y...>:  List of array sizes in byte"
 	echo "--threads_multiple <value>: Multiply number threads by <value>. Default is 2"
