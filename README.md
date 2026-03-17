@@ -197,15 +197,15 @@ This explores the memory bandwidth scaling characteristics across different leve
 
 The wrapper integrates with the test_tools-wrappers framework:
 
+- **csv_to_json**: Converts results to JSON format
 - **gather_data**: Collects system information
 - **general_setup**: Parses common options, handles tuned profile detection
-- **package_tool**: Installs required packages
-- **test_header_info**: Generates CSV headers with system metadata
-- **csv_to_json**: Converts results to JSON format
-- **verify_results**: Validates against Pydantic schema
-- **save_results**: Archives results to configured storage
-- **move_data**: Organizes output files
 - **invoke_test**: Handles test orchestration and logging
+- **move_data**: Organizes output files
+- **package_tool**: Installs required packages
+- **save_results**: Archives results to configured storage
+- **test_header_info**: Generates CSV headers with system metadata
+- **verify_results**: Validates against Pydantic schema
 
 ## Return Codes
 
