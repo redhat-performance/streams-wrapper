@@ -421,7 +421,7 @@ fi
 #
 # Install required packaging.
 #
-${TOOLS_BIN}/package_tool --wrapper_config ${run_dir}/streams.json --no_packages $to_no_pkg_install
+package_tool --wrapper_config ${run_dir}/streams.json
 lrtc=$?
 if [[ $? -ne $lrtc ]]; then
 	echo Packaging installed failed.
