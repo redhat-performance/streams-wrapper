@@ -130,8 +130,6 @@ General options
   --usage: this usage message.
 ```
 
-Note: The script does not install pbench for you.  You need to do that manually.
-
 ## Examples
 
 ### Basic run with defaults
