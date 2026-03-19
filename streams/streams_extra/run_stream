@@ -233,7 +233,7 @@ build_images()
 
 setup_sizing()
 {
-	numa_nodes=`$top_dir/test_tools/detect_numa --node-count`
+	numa_nodes=`${TOOLS_BIN}/detect_numa --node-count`
 
 	if [ $optim -eq 3 ]; then
 		echo Optimization=O3
@@ -311,7 +311,7 @@ do
 	worker=`echo ${numb_threads}*${sockets_add} | bc`
 	export OMP_NUM_THREADS=$worker
 	let "node_index=$sockets_add-1"
-	cpu_numa=`$top_dir/test_tools//detect_numa -n $node_index --cpu-list`
+	cpu_numa=`${TOOLS_BIN}/detect_numa -n $node_index --cpu-list`
 	cpus_use=${cpus_use}${separ}${cpu_numa}
 	separ=","
 	echo Running on cpus: $cpus_use
