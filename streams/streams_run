@@ -61,22 +61,11 @@ TOOLS_BIN="${HOME}/test_tools"
 export TOOLS_BIN
 tools_git=https://github.com/redhat-performance/test_tools-wrappers
 
-attempt_tools_wget()
+attempt_tools_generic()
 {
+	method="$1"
         if [[ ! -d "$TOOLS_BIN" ]]; then
-                wget ${tools_git}/archive/refs/heads/main.zip
-                if [[ $? -eq 0 ]]; then
-                        unzip -q main.zip
-                        mv test_tools-wrappers-main ${TOOLS_BIN}
-                        rm main.zip
-                fi
-        fi
-}
-
-attempt_tools_curl()
-{
-        if [[ ! -d "$TOOLS_BIN" ]]; then
-                curl -L -O ${tools_git}/archive/refs/heads/main.zip
+                $method ${tools_git}/archive/refs/heads/main.zip
                 if [[ $? -eq 0 ]]; then
                         unzip -q main.zip
                         mv test_tools-wrappers-main ${TOOLS_BIN}
@@ -95,8 +84,8 @@ attempt_tools_git()
         fi
 }
 
-attempt_tools_wget
-attempt_tools_curl
+attempt_tools_generic "wget"
+attempt_tools_generic "curl -L -O "
 attempt_tools_git
 
 source ${TOOLS_BIN}/error_codes
