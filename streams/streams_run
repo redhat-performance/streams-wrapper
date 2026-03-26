@@ -79,7 +79,8 @@ attempt_tools_git()
         if [[ ! -d "$TOOLS_BIN" ]]; then
                 git clone $tools_git "$TOOLS_BIN"
                 if [ $? -ne 0 ]; then
-                        exit "Error: pulling git $tools_git failed." 101
+                       echo "Error: pulling git $tools_git failed."
+		       exit 101
                 fi
         fi
 }
