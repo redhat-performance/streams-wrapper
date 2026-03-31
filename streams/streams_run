@@ -76,6 +76,27 @@ source ${TOOLS_BIN}/error_codes
 # Report results
 #
 
+validate_data()
+{
+	tmpfile=$1
+
+	${TOOLS_BIN}/csv_to_json $to_json_flags --transpose --csv_file ${tmpfile}_worker --output_file results_streams.json
+	lrtc=$?
+	if [[ $lrtc -ne 0 ]]; then
+		echo "Verification of streams data failed"
+		exit $lrtc
+	fi
+	${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $script_dir/results_schema.py --class_name Streams_Results --file results_streams.json
+	lrtc=$?
+	if [[ $lrtc -ne 0 ]]; then
+		echo Verification of streams data failed.
+		rtc=$ltrc
+	fi
+}
+
+#
+# Break each numa node run into its own file before we validate the data.
+#
 process_list()
 {
 	echo "# $number_sockets Socket" >> $csv_file
@@ -92,20 +113,23 @@ process_list()
 	#
 	tmpfile=$(mktemp /tmp/streams_reduce_.XXXXXX)
 	cut -d',' -f1-4 $csv_file > $tmpfile
-	${TOOLS_BIN}/csv_to_json $to_json_flags --transpose --csv_file $tmpfile --output_file results_streams.json
-	lrtc=$?
-	if [[ $lrtc -ne 0 ]]; then
-		echo "Verification of streams data failed"
-		exit $lrtc
-	fi	
-	${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $script_dir/results_schema.py --class_name Streams_Results --file results_streams.json
-	lrtc=$?
-	if [[ $lrtc -ne 0 ]]; then
-		echo Verification of streams data failed.
-		rtc=$ltrc
-	fi
-	rm $tmpfile
-	rm -f results_streams.json
+	created=0
+	while IFS= read -r run_data
+	do
+		if [[ $run_data == *"Socket"* ]]; then
+			if [[ $created -eq 1 ]]; then
+				validate_data ${tmpfile}
+				rm -f ${tmpfile}_worker results_streams.json
+				continue
+			fi
+			created=1
+		fi
+		if [[ $created -eq 1 ]]; then
+			echo $run_data >> ${tmpfile}_worker
+		fi
+	done < "${tmpfile}"
+	validate_data ${tmpfile}
+	rm -f results_streams.json $tmpfile ${tmpfile}_worker
 }
 
 process_results()
