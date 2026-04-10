@@ -61,15 +61,34 @@ TOOLS_BIN="${HOME}/test_tools"
 export TOOLS_BIN
 tools_git=https://github.com/redhat-performance/test_tools-wrappers
 
-if [ ! -d "${TOOLS_BIN}" ]; then
-        git clone $tools_git ${TOOLS_BIN}
-        if [ $? -ne 0 ]; then
-                echo pulling git $tools_git failed.
-                exit 101
+attempt_tools_generic()
+{
+	method="$1"
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                $method ${tools_git}/archive/refs/heads/main.zip
+                if [[ $? -eq 0 ]]; then
+                        unzip -q main.zip
+                        mv test_tools-wrappers-main ${TOOLS_BIN}
+                        rm main.zip
+                fi
         fi
-else
-	echo Found an existing test_tools directory, using it.
-fi
+}
+
+attempt_tools_git()
+{
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                git clone $tools_git "$TOOLS_BIN"
+                if [ $? -ne 0 ]; then
+                       echo "Error: pulling git $tools_git failed." >&2
+		       exit 101
+                fi
+        fi
+}
+
+attempt_tools_generic "wget"
+attempt_tools_generic "curl -L -O "
+attempt_tools_git
+
 source ${TOOLS_BIN}/error_codes
 
 #
