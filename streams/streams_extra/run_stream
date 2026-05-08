@@ -47,6 +47,7 @@ ARGUMENT_LIST=(
 	"cache_start_size"
 	"host"
 	"iterations"
+	"ntimes"
 	"numb_sizes"
 	"optimize_lvl"
 	"pcpdir"
@@ -92,6 +93,10 @@ while [[ $# -gt 0 ]]; do
 		;;
 		--iterations)
 			iterations=${2}
+			shift 2
+		;;
+		--ntimes)
+			ntimes=${2}
 			shift 2
 		;;
 		--numb_sizes)
@@ -189,7 +194,7 @@ build_images()
 				continue
 			fi
 
-			CC_CMD="gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic"
+			CC_CMD="gcc ${MOPT} -fopenmp  -mcmodel=large ${optim_opt} -DNTIMES=${ntimes} -DSTREAM_ARRAY_SIZE=${use_cache} stream_omp_5_10.c -o ${stream} -fno-pic"
 			echo $CC_CMD >> streams_build_options
 			$CC_CMD
 			if [ $? -ne 0 ]; then

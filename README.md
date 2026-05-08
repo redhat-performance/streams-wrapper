@@ -24,6 +24,8 @@ Streams Options:
   --cache_start_factor <value>: Start the cache size at base cache * <value>. Default is 1.
   --cache_cap_size <value>: Caps the size of cache to this value. Default is no cap (0).
   --nsizes <value>: Maximum number of cache sizes to test. Default is 4.
+  --ntimes <value>: Sets the compile flag NTIMES to value x. The streams run will"
+    report the best value of the x runs.
   --opt2 <value>: If value is not 0, run with O2 optimization level. Default is 1.
   --opt3 <value>: If value is not 0, run with O3 optimization level. Default is 1.
   --result_dir <string>: Directory to place results into. Default is
