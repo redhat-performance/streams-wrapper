@@ -186,7 +186,7 @@ process_results()
 		let "item_count=${item_count}+1"
 		echo "$item" >> $data_file
 	done
-	sort -n -u -t : -k 3 -k 1  $data_file| grep -v ^buffer > ${data_file}.sorted
+	sort -n -u -t : -k 3,3 -k 1,1  $data_file| grep -v ^buffer > ${data_file}.sorted
 	array_size=""
 	for asize in `cut -d':' -f 1 ${data_file}.sorted | sort -nu`; do
 		array_size=${array_size}","${asize}
@@ -211,6 +211,11 @@ process_results()
 		else
 			if [ $current_socket -ne $number_sockets ]; then
 				process_list
+				copy=""
+				scale=""
+				add=""
+				triad=""
+				separ=""
 			fi
 			number_sockets=$current_socket
 		fi
@@ -243,7 +248,6 @@ process_results()
 		triad=${triad}${separ}$val
 		separ=","
 	done < ${data_file}.sorted
-	rm ${data_file}.sorted 2> /dev/null
 	process_list
 }
 
