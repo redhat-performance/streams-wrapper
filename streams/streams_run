@@ -248,6 +248,7 @@ process_results()
 		triad=${triad}${separ}$val
 		separ=","
 	done < ${data_file}.sorted
+	rm ${data_file}.sorted 2> /dev/null
 	process_list
 }
 
