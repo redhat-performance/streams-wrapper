@@ -333,14 +333,14 @@ retrieve_sys_config()
 	$TOOLS_BIN/test_header_info --results_file $csv_file --host $to_configuration --sys_type $to_sys_type \
           --tuned $to_tuned_setting --results_version $streams_wrapper_version --test_name $test_name \
 	  --meta_output "Optimization level: ${1}" \
-	  --meta_output "kernel_rev "`grep "^kernel:" stream* | cut -d: -f 3 | sort -u`" \
-	  --meta_output "numa_nodes "`grep "^NUMA node(s):" stream* | cut -d: -f 3 | sort -u`" \
-	  --meta_output "number_cpus "`grep "^CPU(s):" stream* | cut -d: -f 3 | sort -u`"  \
-	  --meta_output "Thread\(s\)_per_core "`grep "Thread(s) per core:" stream* | cut -d: -f 3 | sort -u`"  \
-	  --meta_output "Core\(s\)_per_socket "`grep "Core(s) per socket:" stream* | cut -d: -f 3 | sort -u`"  \
-	  --meta_output "Socket\(s\) "`grep "Socket(s):" stream* | cut -d: -f 3 | sort -u`"  \
-	  --meta_output "Model_name "`grep "^Model name" stream* | cut -d: -f 3 | sort -u`" \
-	  --meta_output "total_memory "`grep "MemTotal:" /proc/meminfo | cut -d':' -f 2 | sed "s/ //g"`" \
+	  --meta_output "kernel_rev `grep "^kernel:" stream* | cut -d: -f 3 | sort -u`" \
+	  --meta_output "numa_nodes `grep "^NUMA node(s):" stream* | cut -d: -f 3 | sort -u`" \
+	  --meta_output "number_cpus `grep "^CPU(s):" stream* | cut -d: -f 3 | sort -u`"  \
+	  --meta_output "Thread\(s\)_per_core `grep "Thread(s) per core:" stream* | cut -d: -f 3 | sort -u`"  \
+	  --meta_output "Core\(s\)_per_socket `grep "Core(s) per socket:" stream* | cut -d: -f 3 | sort -u`"  \
+	  --meta_output "Socket\(s\) `grep "Socket(s):" stream* | cut -d: -f 3 | sort -u`"  \
+	  --meta_output "Model_name `grep "^Model name" stream* | cut -d: -f 3 | sort -u`" \
+	  --meta_output "total_memory `grep "MemTotal:" /proc/meminfo | cut -d':' -f 2 | sed "s/ //g"`" \
 	  --meta_output "streams_version_# $streams_vers"
 }
 
