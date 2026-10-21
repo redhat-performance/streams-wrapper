@@ -137,7 +137,7 @@ process_list()
 	created=0
 	while IFS= read -r run_data
 	do
-		if [[ $run_data == *"Socket"* ]]; then
+		if [[ $run_data == *"Socket" ]]; then
 			if [[ $created -eq 1 ]]; then
 				validate_data ${tmpfile}
 				rm -f ${tmpfile}_worker results_streams.json
